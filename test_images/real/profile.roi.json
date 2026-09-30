@@ -1,0 +1,8 @@
+﻿{
+  "name": "sc-center-rs",
+  "calibratedWidth": 3440,
+  "calibratedHeight": 1440,
+  "regions": {
+    "rs": { "xPercent": 0.453488, "yPercent": 0.305556, "widthPercent": 0.093023, "heightPercent": 0.048611 }
+  }
+}

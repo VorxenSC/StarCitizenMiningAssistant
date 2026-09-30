@@ -12,18 +12,25 @@ public enum ScanMode
 
 public enum PreprocessMode
 {
-    /// <summary>Try grayscale first, then a binarized variant if no number was found.</summary>
+    /// <summary>Try white-text isolation first, then grayscale, then binarized, until a known ore matches.</summary>
     Auto,
     Grayscale,
     Binarize,
+    /// <summary>Blue channel: white digits on an amber plate (icon and plate vanish).</summary>
+    WhiteText,
+    /// <summary>min(R,G): amber/yellow digits on teal space.</summary>
+    Amber,
 }
 
 public sealed class OcrSettings
 {
     /// <summary>BCP-47 tag of the Windows OCR language pack. Falls back to user profile languages if missing.</summary>
     public string Language { get; set; } = "en-US";
-    /// <summary>ROI upscale factor before OCR. HUD digits are small; 2–4 helps Windows OCR a lot.</summary>
-    public int Upscale { get; set; } = 3;
+    /// <summary>
+    /// ROI upscale factor before OCR. HUD digits are ~13 px tall at 1440p; 4 gave 10/10 on real
+    /// 3440×1440 screenshots (3 confused 5↔6 occasionally).
+    /// </summary>
+    public int Upscale { get; set; } = 4;
     public PreprocessMode Preprocess { get; set; } = PreprocessMode.Auto;
     public NumberNormalizerOptions Normalizer { get; set; } = new();
 }

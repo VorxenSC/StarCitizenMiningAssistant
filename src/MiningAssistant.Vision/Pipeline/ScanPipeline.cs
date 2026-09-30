@@ -42,12 +42,21 @@ public sealed class ScanPipeline
 
     public string OcrName => _ocr.Name;
 
-    private IEnumerable<Variant> Variants => _settings.Preprocess switch
+    private IEnumerable<(Variant variant, int scale)> Attempts(int scale)
     {
-        PreprocessMode.Grayscale => new[] { Variant.Grayscale },
-        PreprocessMode.Binarize => new[] { Variant.Binarized },
-        _ => new[] { Variant.Grayscale, Variant.Binarized },
-    };
+        var variants = _settings.Preprocess switch
+        {
+            PreprocessMode.Grayscale => new[] { Variant.Grayscale },
+            PreprocessMode.Binarize => new[] { Variant.Binarized },
+            PreprocessMode.WhiteText => new[] { Variant.WhiteText },
+            PreprocessMode.Amber => new[] { Variant.Amber },
+            _ => new[] { Variant.WhiteText, Variant.Amber, Variant.Grayscale, Variant.Binarized },
+        };
+        foreach (var v in variants) yield return (v, scale);
+        // Last resort only reached when nothing matched or agreed: a different scale often fixes
+        // glyphs the OCR merged or split at the primary scale.
+        if (_settings.Preprocess == PreprocessMode.Auto && scale > 2) yield return (Variant.Grayscale, scale - 1);
+    }
 
     public Task<FrameAnalysis> AnalyzeRoiAsync(Bitmap roi, bool keepDebugImage, CancellationToken ct = default) =>
         AnalyzeAsync(roi, _settings.Upscale, keepDebugImage, ct);
@@ -75,12 +84,14 @@ public sealed class ScanPipeline
         MatchResult? bestMatch = null;
         byte[]? png = null;
 
-        // Stop at the first variant whose number a known material explains cleanly; otherwise keep
-        // trying and keep the best reading (known material > fewer substitutions > any number).
-        foreach (var variant in Variants)
+        // Stop at the first variant whose number a known material explains cleanly, or as soon as two
+        // variants agree on the same value (e.g. a genuine unknown RS); otherwise keep the best reading
+        // (known material > fewer substitutions > any number).
+        var seen = new HashSet<int>();
+        foreach (var (variant, s) in Attempts(scale))
         {
             var sw = Stopwatch.StartNew();
-            using var prepared = ImageOps.Prepare(image, scale, variant);
+            using var prepared = ImageOps.Prepare(image, s, variant);
             var output = await _ocr.RecognizeAsync(prepared, ct).ConfigureAwait(false);
             attempts.Add(new OcrAttempt(variant, output.Text, sw.Elapsed));
 
@@ -93,6 +104,7 @@ public sealed class ScanPipeline
                 if (keepDebugImage) png = ImageOps.ToPng(prepared);
             }
             if (match is { Status: not MatchStatus.Unknown } && reading.Chosen!.Substitutions == 0) break;
+            if (reading.RS is int v && !seen.Add(v)) break;
         }
 
         return new FrameAnalysis(attempts, best!, bestMatch, total.Elapsed, png);

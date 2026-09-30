@@ -25,10 +25,21 @@ public sealed class AppPaths
     public AppSettings LoadSettings() => Json.LoadOrCreate<AppSettings>(SettingsFile);
     public void SaveSettings(AppSettings s) => Json.Save(SettingsFile, s);
 
+    /// <summary>Built-in preset for the Star Citizen ship-scanner RS code (used until the user calibrates).</summary>
+    public string PresetProfileFile => Path.Combine(DataRoot, "profiles", "star-citizen-center.roi.json");
+
     public RoiProfile LoadProfile(string name)
     {
         var path = ProfileFile(name);
-        return File.Exists(path) ? Json.Deserialize<RoiProfile>(File.ReadAllText(path)) : new RoiProfile { Name = name };
+        if (File.Exists(path)) return Json.Deserialize<RoiProfile>(File.ReadAllText(path));
+        if (File.Exists(PresetProfileFile))
+        {
+            var preset = Json.Deserialize<RoiProfile>(File.ReadAllText(PresetProfileFile));
+            preset.Name = name;
+            preset.CalibratedAt = null; // marks it as an uncalibrated preset
+            return preset;
+        }
+        return new RoiProfile { Name = name };
     }
 
     public void SaveProfile(RoiProfile p) => Json.Save(ProfileFile(p.Name), p);

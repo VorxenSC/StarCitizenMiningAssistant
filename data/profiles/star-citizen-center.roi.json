@@ -1,0 +1,11 @@
+{
+  // Preset used until you calibrate: the ship-scanner RS code (amber pin icon + number) is drawn
+  // just above the round center reticle. Measured on 3440x1440 (number centered at ~x=1720, y=475).
+  // Regions are fractions of the monitor; the box is generous on purpose (text is auto-trimmed).
+  "name": "default",
+  "calibratedWidth": 3440,
+  "calibratedHeight": 1440,
+  "regions": {
+    "rs": { "xPercent": 0.453488, "yPercent": 0.305556, "widthPercent": 0.093023, "heightPercent": 0.048611 }
+  }
+}

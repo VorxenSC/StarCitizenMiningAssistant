@@ -12,7 +12,7 @@ Overlay para Windows que **lê a tela** durante a mineração com Prospector/MOL
 └──────────────────────┘
 ```
 
-> **Copiloto visual, não um bot.** O app só observa a tela exatamente como você vê. Ele **não** injeta DLL, **não** lê memória, **não** modifica arquivos do jogo, **não** intercepta rede, **não** faz hook e **não** envia nenhuma tecla/mouse ao jogo. Todo processamento (captura + OCR) é local; nada é enviado para a internet.
+> **Copiloto visual, não um bot.** O app só observa a tela exatamente como você vê. Ele **não** injeta DLL, **não** lê memória, **não** modifica arquivos do jogo, **não** intercepta rede, **não** faz hook e **não** envia nenhuma tecla/mouse ao jogo. Todo processamento (captura + OCR) é local; nada é enviado para a internet. Veja [Segurança e anti-cheat](#segurança-e-anti-cheat-easy-anti-cheat).
 
 ---
 
@@ -86,13 +86,21 @@ Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"
 Se o idioma configurado não existir, o app usa automaticamente os idiomas do seu perfil (pt-BR também lê números). O idioma fica em `config/settings.json` → `ocr.language`.
 
 Outras opções em `ocr`:
-- `upscale` (padrão 3): amplia a ROI antes do OCR. Números do HUD são pequenos; 2–4 ajuda muito.
-- `preprocess`: `Auto` (tenta tons de cinza e, se necessário, binarizado), `Grayscale` ou `Binarize`.
+- `upscale` (padrão 4): amplia a ROI antes do OCR. O número do RS tem ~13 px de altura em 1440p; 4× leu 10/10 screenshots reais (3× trocou 5↔6 às vezes).
+- `preprocess`: `Auto` (padrão) tenta, nesta ordem, até um minério bater ou duas leituras concordarem:
+  - `WhiteText` — canal azul: dígitos claros sobre a placa âmbar; ícone e placa somem;
+  - `Amber` — mín(R,G): texto âmbar/amarelo sobre o espaço azul-petróleo;
+  - `Grayscale` e `Binarize` — genéricos; e por último uma tentativa em escala alternativa.
+
+  Detalhe do HUD do Star Citizen: há **aberração cromática** (cada canal RGB deslocado ~1 px) e a fonte é negrito condensada com vãos de 1–2 px. Por isso não se usa limiar rígido nas variantes principais — ele fecha os "0".
+- O texto é **recortado automaticamente** dentro da ROI antes de ampliar: a ROI pode ter folga sem custo extra (leituras típicas de 7–25 ms).
 - `normalizer.maxSubstitutions` (padrão 2): quantas letras confundíveis (S→5, B→8, O→0, I/l→1, Z→2) podem ser corrigidas por número.
 
 ---
 
-## Calibrar a ROI (obrigatório no primeiro uso)
+## Calibrar a ROI
+
+**Preset incluído:** no Star Citizen o código RS (ícone âmbar + número, ex. `📍 15,420`) aparece logo acima do retículo redondo central. O app já vem com esse preset (`data/profiles/star-citizen-center.roi.json`, medido em 3440×1440) e o usa enquanto você não calibrar. Se não funcionar na sua resolução/FOV, calibre:
 
 1. Abra o Star Citizen e deixe um RS visível na tela (faça um scan).
 2. Pressione **Ctrl+Shift+C** (ou Settings → *Calibrate ROI…*). A tela congela com um screenshot.
@@ -203,7 +211,12 @@ dotnet run --project src/MiningAssistant.Cli -- match 3585 10755 21505
 dotnet run --project src/MiningAssistant.Cli -- analyze test_images/synthetic/gold-x3__rs10755.png
 dotnet run --project src/MiningAssistant.Cli -- regress test_images -v
 dotnet run --project src/MiningAssistant.Cli -- synth
+dotnet run --project src/MiningAssistant.Cli -- live 20 --dump .scratch/live
 ```
+
+`live` captura a ROI do RS direto do monitor do jogo (mesmo caminho do overlay) e mostra a leitura quadro a quadro; com `--dump` salva os recortes em qualidade nativa — ótimos para novos testes.
+
+Screenshots nativos do próprio jogo (tecla de screenshot do SC → `StarCitizen\LIVE\screenshots`, 3440×1440) funcionam muito bem; prints redimensionados/comprimidos (chat, Discord) **não** servem — o número fica com 3–6 px e nenhum OCR lê.
 
 Coloque screenshots reais em `test_images/real/` com o RS esperado no nome (`qualquer_coisa__rs3585.png`) e copie seu `config/profiles/default.roi.json` para lá como `profile.roi.json`. Veja [test_images/README.md](test_images/README.md).
 
@@ -234,6 +247,21 @@ Interfaces `IScreenCapture` e `IOcrEngine` permitem trocar a captura (ex.: Windo
 Arquivos gerados ao lado do executável: `config/settings.json`, `config/profiles/*.roi.json`, `config/app.log`, `unknown_signatures/`.
 
 ---
+
+## Segurança e anti-cheat (Easy Anti-Cheat)
+
+O Star Citizen usa Easy Anti-Cheat. O app foi desenhado para ficar **inteiramente fora do jogo**:
+
+| O app faz | O app **não** faz |
+|---|---|
+| lê a imagem já composta da área de trabalho (`BitBlt`/`CopyFromScreen`, igual a print, OBS, Discord) — só um retângulo pequeno | abrir o processo do jogo (`OpenProcess`), ler/escrever memória |
+| desenha **suas próprias** janelas (overlay transparente, click-through) | injetar DLL, hook de DirectX/Vulkan/WinAPI, overlay injetado |
+| registra atalhos globais com `RegisterHotKey` (API oficial do Windows, não é hook) | enviar teclas/mouse ao jogo, macros, automação |
+| lê/grava apenas arquivos na própria pasta | tocar arquivos do jogo; acessar rede |
+
+Isso é **verificado automaticamente**: `tests/MiningAssistant.Tests/AntiCheatSafetyTests.cs` falha o build se qualquer código usar APIs de processo/memória/injeção/entrada sintética/rede ou importar qualquer função nativa fora de uma lista de 9 funções de `user32.dll`.
+
+**Honestidade sobre o risco:** a detecção técnica do EAC mira injeção, leitura de memória e manipulação de arquivos — nada disso existe aqui. Mas ninguém fora da CIG pode garantir 100% como a política será aplicada. O EULA proíbe software de terceiros *"designed to modify the Game experience and/or give you an advantage"* e programas de macro/automação. Este app não modifica o jogo nem automatiza nada; ele só interpreta um número que já está na sua tela (o mesmo que consultar uma tabela de RS). Se quiser certeza absoluta, pergunte ao suporte da CIG antes de usar.
 
 ## Limitações conhecidas
 

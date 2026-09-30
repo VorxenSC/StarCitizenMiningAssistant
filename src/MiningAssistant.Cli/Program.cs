@@ -29,12 +29,19 @@ bool Flag(string name) => cliArgs.Remove(name);
 
 var version = Opt("--version") ?? "default";
 var profilePath = Opt("--profile");
+var upscaleOpt = Opt("--upscale");
+var preprocessOpt = Opt("--preprocess");
+var dumpDir = Opt("--dump");
+if (Opt("--white-threshold") is { } wt)
+    MiningAssistant.Vision.Imaging.ImageOps.WhiteTextThreshold = double.Parse(wt, System.Globalization.CultureInfo.InvariantCulture);
 var whole = Flag("--whole");
 var verbose = Flag("-v");
 
 if (cliArgs.Count == 0) return Usage();
 var db = MaterialDatabaseLoader.LoadForVersion(paths.DataRoot, version);
 var settings = new AppSettings { GameVersion = version };
+if (upscaleOpt is not null) settings.Ocr.Upscale = int.Parse(upscaleOpt);
+if (preprocessOpt is not null) settings.Ocr.Preprocess = Enum.Parse<PreprocessMode>(preprocessOpt, true);
 var matcher = new SignatureMatcher(db, settings.Matcher);
 
 switch (cliArgs[0].ToLowerInvariant())
@@ -57,7 +64,12 @@ switch (cliArgs[0].ToLowerInvariant())
         {
             var profile = whole ? null : ResolveProfile(file);
             using var bmp = new Bitmap(file);
-            var r = await pipeline.AnalyzeScreenshotAsync(bmp, profile, false);
+            var r = await pipeline.AnalyzeScreenshotAsync(bmp, profile, dumpDir is not null);
+            if (dumpDir is not null && r.ProcessedPng is { } png)
+            {
+                Directory.CreateDirectory(dumpDir);
+                File.WriteAllBytes(Path.Combine(dumpDir, Path.GetFileNameWithoutExtension(file) + ".ocr.png"), png);
+            }
             Console.WriteLine($"── {Path.GetFileName(file)}  [{(profile is null ? "whole image" : "ROI")}; {r.OcrTime.TotalMilliseconds:F0} ms]");
             Console.WriteLine("OCR RAW:     " + r.RawText);
             Console.WriteLine("NUMBERS:     " + string.Join(", ", r.Reading.AllNumbers.Select(n => $"{n.Raw}→{n.Value}{(n.Substitutions > 0 ? $" ({n.Substitutions} subs)" : "")}")));
@@ -90,6 +102,37 @@ switch (cliArgs[0].ToLowerInvariant())
         }
         Console.WriteLine($"\n{pass} passed, {fail} failed, {skipped} skipped (no rsNNNN in file name). Mode: {(whole ? "whole image" : "ROI when profile.roi.json present")}");
         return fail == 0 ? 0 : 1;
+    }
+
+    case "live":
+    {
+        // Same capture path as the overlay: grabs only the RS region of the game monitor.
+        var frames = cliArgs.Count > 1 && int.TryParse(cliArgs[1], out var nf) ? nf : 10;
+        var pipeline = CreatePipeline();
+        if (pipeline is null) return 2;
+        var profile = profilePath is not null ? Json.Deserialize<RoiProfile>(File.ReadAllText(profilePath)) : paths.LoadProfile("default");
+        var region = profile.Get(RoiNames.RS);
+        if (region is null) { Console.WriteLine("No RS region in profile."); return 2; }
+        var monitor = Monitors.Get(int.TryParse(Opt("--monitor"), out var mi) ? mi : 0);
+        var rect = monitor.ToScreen(region.ToPixels(monitor.Width, monitor.Height));
+        Console.WriteLine($"Monitor {monitor}; RS ROI {rect.Width}×{rect.Height} at ({rect.X},{rect.Y})");
+        var capture = new GdiScreenCapture();
+        for (var f = 0; f < frames; f++)
+        {
+            using var roi = capture.Capture(rect);
+            var r = await pipeline.AnalyzeRoiAsync(roi, dumpDir is not null);
+            if (dumpDir is not null)
+            {
+                Directory.CreateDirectory(dumpDir);
+                var stamp = $"{DateTime.Now:HHmmss_fff}";
+                roi.Save(Path.Combine(dumpDir, $"live_{stamp}_rs{r.Reading.RS?.ToString() ?? "none"}.png"), ImageFormat.Png);
+                if (r.ProcessedPng is { } png) File.WriteAllBytes(Path.Combine(dumpDir, $"live_{stamp}.ocr.png"), png);
+            }
+            var label = r.Match?.Best is { } b ? $"{b.Material.Name} ×{b.RockCount} {r.Match.Status}" : r.Match?.Status.ToString() ?? "-";
+            Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff}  RS {r.Reading.RS?.ToString() ?? "-",6}  {label,-28} {r.OcrTime.TotalMilliseconds,4:F0} ms  raw: {r.RawText.Replace("\n", " | ")}");
+            await Task.Delay(500);
+        }
+        return 0;
     }
 
     case "synth":
@@ -147,12 +190,16 @@ static int Usage()
           analyze <image|folder>        OCR screenshot(s) and identify the RS
           regress [folder]              Regression test: files named *rs<NNNN>*.png must read that RS
           synth [folder]                Generate synthetic HUD-like test images (+ profile.roi.json)
+          live [frames]                 Capture the RS region from the game monitor and OCR it (--dump saves crops)
           ocr-langs                     List installed Windows OCR languages
 
         Options:
           --version <v>    materials database folder under data/ (default: "default")
           --profile <file> ROI profile to crop screenshots (default: profile.roi.json next to the image)
           --whole          ignore profiles; OCR the whole image
+          --upscale <n>    ROI upscale factor before OCR (default 3)
+          --preprocess <m> Auto | Grayscale | Binarize
+          --dump <dir>     analyze: save the preprocessed image sent to OCR
           -v               verbose (regress: also print passing files)
         """);
     return 1;

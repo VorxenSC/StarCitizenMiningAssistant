@@ -5,7 +5,23 @@ using MiningAssistant.Core.Roi;
 
 namespace MiningAssistant.Vision.Imaging;
 
-public enum Variant { Grayscale, Binarized }
+public enum Variant
+{
+    /// <summary>
+    /// Blue channel + contrast stretch. Star Citizen draws the RS digits in white on an amber plate
+    /// next to an amber pin icon: in the blue channel icon and plate nearly vanish.
+    /// </summary>
+    WhiteText,
+    /// <summary>
+    /// min(R,G) + contrast stretch: amber/yellow and white text stay bright, while the teal/blue
+    /// space background (low red) goes dark. For when the RS code is rendered amber in game.
+    /// </summary>
+    Amber,
+    /// <summary>Max-channel grayscale: keeps colored text bright.</summary>
+    Grayscale,
+    /// <summary>Max-channel grayscale + Otsu threshold.</summary>
+    Binarized,
+}
 
 /// <summary>
 /// Small, allocation-light preprocessing for HUD text:
@@ -16,10 +32,28 @@ public static class ImageOps
     public static Bitmap Prepare(Bitmap src, int scale, Variant variant)
     {
         scale = Math.Clamp(scale, 1, 6);
-        using var scaled = Scale(src, scale);
-        var gray = ToGrayBytes(scaled, out var w, out var h);
+        var channel = variant switch
+        {
+            Variant.WhiteText => Channel.Blue,
+            Variant.Amber => Channel.Warm,
+            _ => Channel.Max,
+        };
+        var stretch = variant is Variant.WhiteText or Variant.Amber;
+        using var trimmed = stretch ? TrimToBrightText(src, channel) : null;
+        using var scaled = Scale(trimmed ?? src, scale);
+        var gray = ToGrayBytes(scaled, out var w, out var h, channel);
 
-        if (variant == Variant.Binarized)
+        if (stretch)
+        {
+            // Soft contrast stretch (no hard threshold: the font's counters are only 1–2 px wide
+            // and binarization closes them). Background → black, brightest text → white.
+            var lo = Percentile(gray, 0.50);
+            var hi = Math.Max(lo + 1, (int)Percentile(gray, 0.995));
+            var lut = new byte[256];
+            for (var v = 0; v < 256; v++) lut[v] = (byte)Math.Clamp((v - lo) * 255 / (hi - lo), 0, 255);
+            for (var i = 0; i < gray.Length; i++) gray[i] = lut[gray[i]];
+        }
+        else if (variant == Variant.Binarized)
         {
             var t = OtsuThreshold(gray);
             for (var i = 0; i < gray.Length; i++) gray[i] = gray[i] > t ? (byte)255 : (byte)0;
@@ -45,6 +79,35 @@ public static class ImageOps
         for (var y = 0; y < h; y++)
             Array.Copy(gray, y * w, dst, (y + pad) * pw + pad, w);
         return dst;
+    }
+
+    /// <summary>
+    /// Crops to the bounding box of bright (blue-channel) pixels plus a margin, so a generously drawn
+    /// ROI costs no extra OCR time. Returns null when nothing stands out (keep the full ROI).
+    /// </summary>
+    public static Bitmap? TrimToBrightText(Bitmap src, Channel channel = Channel.Blue, int margin = 6)
+    {
+        var blue = ToGrayBytes(src, out var w, out var h, channel);
+        var lo = Percentile(blue, 0.50);
+        var hi = Percentile(blue, 0.995);
+        if (hi - lo < 40) return null;
+        var t = lo + (hi - lo) / 2;
+
+        int x0 = w, y0 = h, x1 = -1, y1 = -1;
+        for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                if (blue[y * w + x] > t)
+                {
+                    if (x < x0) x0 = x;
+                    if (x > x1) x1 = x;
+                    if (y < y0) y0 = y;
+                    if (y > y1) y1 = y;
+                }
+        if (x1 < 0) return null;
+
+        var rect = Rectangle.FromLTRB(Math.Max(0, x0 - margin), Math.Max(0, y0 - margin), Math.Min(w, x1 + margin + 1), Math.Min(h, y1 + margin + 1));
+        if (rect.Width * rect.Height > w * h * 0.8) return null; // not worth it
+        return src.Clone(rect, PixelFormat.Format32bppArgb);
     }
 
     public static Bitmap Scale(Bitmap src, int scale)
@@ -85,7 +148,9 @@ public static class ImageOps
         finally { bmp.UnlockBits(data); }
     }
 
-    public static unsafe byte[] ToGrayBytes(Bitmap bmp, out int w, out int h)
+    public enum Channel { Max, Blue, Warm }
+
+    public static unsafe byte[] ToGrayBytes(Bitmap bmp, out int w, out int h, Channel channel = Channel.Max)
     {
         w = bmp.Width; h = bmp.Height;
         var gray = new byte[w * h];
@@ -99,7 +164,15 @@ public static class ImageOps
                 {
                     var p = row + x * 4; // BGRA
                     // Max channel keeps colored HUD text (cyan/amber) bright instead of averaging it away.
-                    gray[y * w + x] = Math.Max(p[0], Math.Max(p[1], p[2]));
+                    // Blue alone: white text stays bright and sharp (the HUD's chromatic aberration shifts
+                    // each channel ~1 px), while amber icons/plates have almost no blue.
+                    // Warm = min(R,G): amber/yellow/white stay bright, teal/blue space goes dark.
+                    gray[y * w + x] = channel switch
+                    {
+                        Channel.Blue => p[0],
+                        Channel.Warm => Math.Min(p[1], p[2]),
+                        _ => Math.Max(p[0], Math.Max(p[1], p[2])),
+                    };
                 }
             }
         }
@@ -125,6 +198,23 @@ public static class ImageOps
         }
         finally { bmp.UnlockBits(data); }
         return bmp;
+    }
+
+    /// <summary>Fraction between background (median) and text peak used by <see cref="Variant.WhiteText"/>.</summary>
+    public static double WhiteTextThreshold { get; set; } = 0.55;
+
+    public static byte Percentile(byte[] gray, double p)
+    {
+        var hist = new int[256];
+        foreach (var b in gray) hist[b]++;
+        var target = (long)(gray.Length * p);
+        long acc = 0;
+        for (var i = 0; i < 256; i++)
+        {
+            acc += hist[i];
+            if (acc >= target) return (byte)i;
+        }
+        return 255;
     }
 
     public static byte OtsuThreshold(byte[] gray)
