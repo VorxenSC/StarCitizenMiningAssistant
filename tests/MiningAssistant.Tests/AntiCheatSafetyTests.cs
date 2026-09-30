@@ -32,8 +32,20 @@ public class AntiCheatSafetyTests
     {
         "EnumDisplayMonitors", "GetMonitorInfo", "SetProcessDpiAwarenessContext",
         "GetWindowLongPtrW", "SetWindowLongPtrW", "SetWindowPos", "SetWindowDisplayAffinity",
-        "RegisterHotKey", "UnregisterHotKey",
+        // Hotkeys: passive keyboard Raw Input sink (receive-only; no hook, keys are not blocked or altered).
+        "RegisterRawInputDevices", "GetRawInputData",
     };
+
+    [Fact]
+    public void Raw_input_is_registered_passively()
+    {
+        // Receive-only in the background. RIDEV_NOLEGACY / RIDEV_NOHOTKEYS / RIDEV_CAPTUREMOUSE would
+        // change how *other* apps get input; they must never be used.
+        var all = string.Join("\n", SourceFiles().Select(File.ReadAllText));
+        Assert.Contains("RIDEV_INPUTSINK", all);
+        foreach (var flag in new[] { "RIDEV_NOLEGACY", "RIDEV_NOHOTKEYS", "RIDEV_CAPTUREMOUSE", "RIDEV_APPKEYS" })
+            Assert.DoesNotContain(flag, all);
+    }
 
     private static IEnumerable<string> SourceFiles()
     {

@@ -35,9 +35,30 @@ public sealed class OcrSettings
     public NumberNormalizerOptions Normalizer { get; set; } = new();
 }
 
+public enum OverlayPlacement
+{
+    /// <summary>Right next to the in-game RS indicator (anchored to the calibrated RS region).</summary>
+    NextToSignal,
+    /// <summary>Fixed position from XPercent / YPercent.</summary>
+    Manual,
+}
+
 public sealed class OverlaySettings
 {
-    /// <summary>Top-left position as a fraction of the monitor.</summary>
+    public OverlayPlacement Placement { get; set; } = OverlayPlacement.NextToSignal;
+
+    /// <summary>
+    /// NextToSignal: card top-left relative to the RS region's center, in pixels at 1440p
+    /// (scaled with the monitor height). Default puts the card just right of the number,
+    /// with the material name level with it.
+    /// </summary>
+    public int AnchorOffsetX { get; set; } = 70;
+    public int AnchorOffsetY { get; set; } = -32;
+
+    /// <summary>Show the faint "scanning" pill when nothing is detected (off by default next to the reticle).</summary>
+    public bool ShowIdleIndicator { get; set; } = false;
+
+    /// <summary>Manual placement: top-left position as a fraction of the monitor.</summary>
     public double XPercent { get; set; } = 0.78;
     public double YPercent { get; set; } = 0.12;
     public double Opacity { get; set; } = 0.92;
