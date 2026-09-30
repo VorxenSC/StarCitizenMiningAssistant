@@ -19,7 +19,10 @@ public sealed class ScanSession
     private readonly SignatureMatcher _matcher;
     private readonly TemporalVoter<int> _voter;
     private readonly TimeSpan _hold;
+    // Fewest OCR substitutions seen for each value still in the window: one clean read is enough.
+    private readonly Dictionary<int, int> _minSubs = new();
     private MatchResult? _last;
+    private int _lastSubs;
     private DateTime _lastSeen;
 
     public ScanSession(SignatureMatcher matcher, int voteWindow = 5, int minVotes = 3, TimeSpan? hold = null)
@@ -34,18 +37,25 @@ public sealed class ScanSession
     public void Reset()
     {
         _voter.Clear();
+        _minSubs.Clear();
         _last = null;
     }
 
-    public SessionState Observe(int? rs, DateTime now)
+    public SessionState Observe(int? rs, DateTime now, int substitutions = 0)
     {
         _voter.Add(rs, now);
-        var vote = _voter.Current(now);
+        if (rs is int v)
+            _minSubs[v] = _minSubs.TryGetValue(v, out var s) ? Math.Min(s, substitutions) : substitutions;
+        var inWindow = _voter.Snapshot().OfType<int>().ToHashSet();
+        foreach (var k in _minSubs.Keys.Where(k => !inWindow.Contains(k)).ToList()) _minSubs.Remove(k);
 
+        var vote = _voter.Current(now);
         if (vote.Value is int stable)
         {
+            var subs = _minSubs.GetValueOrDefault(stable);
             var isNew = _last?.ScannedRS != stable;
-            if (isNew) _last = _matcher.Match(stable);
+            if (isNew || subs != _lastSubs) _last = _matcher.Match(stable, subs);
+            _lastSubs = subs;
             _lastSeen = now;
             return new SessionState(stable, _last, vote.Votes, vote.WindowCount, IsHeld: false, IsNew: isNew);
         }

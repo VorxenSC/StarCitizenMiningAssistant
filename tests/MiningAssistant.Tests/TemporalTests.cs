@@ -41,6 +41,19 @@ public class TemporalTests
     }
 
     [Fact]
+    public void Session_uses_cleanest_read_of_the_voted_value()
+    {
+        var s = new ScanSession(TestData.Matcher(), 5, 3);
+        s.Observe(3585, At(0), substitutions: 1);
+        s.Observe(3585, At(1), substitutions: 1);
+        var st = s.Observe(3585, At(2), substitutions: 1);
+        Assert.Equal(MatchStatus.Probable, st.Match!.Status);
+
+        st = s.Observe(3585, At(3), substitutions: 0);
+        Assert.Equal(MatchStatus.Exact, st.Match!.Status);
+    }
+
+    [Fact]
     public void Session_holds_result_briefly_then_clears()
     {
         var s = new ScanSession(TestData.Matcher(), 3, 2, TimeSpan.FromSeconds(2));

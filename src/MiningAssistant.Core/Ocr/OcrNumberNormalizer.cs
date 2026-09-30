@@ -32,7 +32,7 @@ public sealed class OcrNumberNormalizer
 {
     private static readonly Dictionary<char, char> Confusables = new()
     {
-        ['O'] = '0', ['o'] = '0', ['Q'] = '0', ['D'] = '0',
+        ['O'] = '0', ['o'] = '0', ['Q'] = '0', ['D'] = '0', ['ø'] = '0', ['Ø'] = '0', ['θ'] = '0',
         ['I'] = '1', ['l'] = '1', ['|'] = '1', ['i'] = '1',
         ['S'] = '5', ['s'] = '5',
         ['B'] = '8',

@@ -1,0 +1,15 @@
+{
+  "name": "synthetic",
+  "calibratedWidth": 1720,
+  "calibratedHeight": 720,
+  "calibratedAt": "2026-09-30T15:23:45.2768412Z",
+  "regions": {
+    "rs": {
+      "xPercent": 0.686046511627907,
+      "yPercent": 0.4166666666666667,
+      "widthPercent": 0.13953488372093023,
+      "heightPercent": 0.08333333333333333,
+      "isValid": true
+    }
+  }
+}

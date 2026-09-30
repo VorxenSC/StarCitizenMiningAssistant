@@ -31,6 +31,9 @@ public sealed class SignatureMatcherOptions
     /// <summary>Best candidate's share of the total score needed to be declared Exact/Probable instead of Ambiguous.</summary>
     public double DominanceShare { get; set; } = 0.75;
 
+    /// <summary>Confidence multiplier per OCR letter→digit substitution in the reading.</summary>
+    public double SubstitutionConfidenceFactor { get; set; } = 0.85;
+
     /// <summary>RS values outside this range are ignored (noise, other HUD numbers).</summary>
     public int MinPlausibleRS { get; set; } = 1000;
     public int MaxPlausibleRS { get; set; } = 200_000;
@@ -77,6 +80,21 @@ public sealed class SignatureMatcher
     }
 
     public bool IsPlausible(int rs) => rs >= Options.MinPlausibleRS && rs <= Options.MaxPlausibleRS;
+
+    /// <summary>
+    /// Match a value that required OCR letter→digit substitutions ("358S").
+    /// Such a read can never be Exact, and each substitution lowers confidence.
+    /// </summary>
+    public MatchResult Match(int scannedRS, int ocrSubstitutions)
+    {
+        var r = Match(scannedRS);
+        if (ocrSubstitutions <= 0 || r.Candidates.Count == 0) return r;
+
+        var factor = Math.Pow(Options.SubstitutionConfidenceFactor, ocrSubstitutions);
+        var candidates = r.Candidates.Select(c => c with { Confidence = c.Confidence * factor }).ToList();
+        var status = r.Status == MatchStatus.Exact ? MatchStatus.Probable : r.Status;
+        return new MatchResult(scannedRS, status, candidates);
+    }
 
     public MatchResult Match(int scannedRS)
     {

@@ -41,6 +41,18 @@ public class SignatureMatcherTests
     }
 
     [Fact]
+    public void Ocr_substitutions_prevent_exact_and_lower_confidence()
+    {
+        var clean = _matcher.Match(3585, 0);
+        var patched = _matcher.Match(3585, 1); // read as "358S"
+
+        Assert.Equal(MatchStatus.Exact, clean.Status);
+        Assert.Equal(MatchStatus.Probable, patched.Status);
+        Assert.Equal("Gold", patched.Best!.Material.Name);
+        Assert.True(patched.Best.Confidence < clean.Best!.Confidence);
+    }
+
+    [Fact]
     public void Unexplained_signature_is_unknown()
     {
         var r = _matcher.Match(5000);
