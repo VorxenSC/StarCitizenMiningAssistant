@@ -34,6 +34,34 @@
     { "name": "Silicon",       "baseRS": 4255, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
     { "name": "Iron",          "baseRS": 4270, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
     { "name": "Aluminum",      "baseRS": 4285, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false, "aliases": [ "Aluminium" ] },
-    { "name": "Ice",           "baseRS": 4300, "priority": "Common",      "category": "Ice",     "notes": "", "enabled": true, "notify": false }
+    { "name": "Ice",           "baseRS": 4300, "priority": "Common",      "category": "Ice",     "notes": "", "enabled": true, "notify": false },
+
+    // ── Non-ore signatures ──────────────────────────────────────────────────────────────
+    // They also multiply (N x base) and can add to ore signatures in mixed clusters.
+    // kind: "AsteroidType" | "FpsDeposit" | "RocDeposit" | "Salvage"
+    // contexts: where the signal can appear ("Space" / "Surface"); empty = anywhere.
+    // Sources (user research, 4.10/4.10.1): Prospector Index/UEX, STARVEIN, SCMINER, SC Wiki API.
+
+    // Orbital asteroid classes: the RS identifies the asteroid type, not the ore. Deep scan needed.
+    { "name": "I-Type Asteroid", "baseRS": 4000, "kind": "AsteroidType", "contexts": [ "Space" ], "category": "Asteroid", "notes": "Composition unknown - approach and scan." },
+    { "name": "C-Type Asteroid", "baseRS": 4700, "kind": "AsteroidType", "contexts": [ "Space" ], "category": "Asteroid", "notes": "Composition unknown - approach and scan." },
+    { "name": "S-Type Asteroid", "baseRS": 4720, "kind": "AsteroidType", "contexts": [ "Space" ], "category": "Asteroid", "notes": "Composition unknown - approach and scan. Beryl deposits reported." },
+    { "name": "P-Type Asteroid", "baseRS": 4750, "kind": "AsteroidType", "contexts": [ "Space" ], "category": "Asteroid", "notes": "Composition unknown - approach and scan." },
+    { "name": "M-Type Asteroid", "baseRS": 4850, "kind": "AsteroidType", "contexts": [ "Space" ], "category": "Asteroid", "notes": "Composition unknown - approach and scan." },
+    { "name": "Q-Type Asteroid", "baseRS": 4870, "kind": "AsteroidType", "contexts": [ "Space" ], "category": "Asteroid", "notes": "Composition unknown - approach and scan." },
+    { "name": "E-Type Asteroid", "baseRS": 4900, "kind": "AsteroidType", "contexts": [ "Space" ], "category": "Asteroid", "notes": "Composition unknown - approach and scan. Beryl deposits reported." },
+
+    // Ground deposits: the RS does NOT identify the mineral (depends on location).
+    { "name": "FPS Deposit", "baseRS": 3000, "kind": "FpsDeposit", "contexts": [ "Surface" ], "category": "Hand mining",
+      "notes": "Hand-mineable gems: Aphorite, Dolivine, Hadanite, Janalite, Sadaryx, Saldynium, Jaclium... (location dependent)." },
+    { "name": "ROC Deposit", "baseRS": 4000, "kind": "RocDeposit", "contexts": [ "Surface" ], "category": "Vehicle mining",
+      "notes": "ROC/vehicle deposits: Beradom, Feynmaline, Glacosite... (location dependent)." },
+
+    // Not mining - here so the overlay never calls it an unknown ore.
+    { "name": "Salvage Panel", "baseRS": 2000, "kind": "Salvage", "category": "Salvage", "notes": "Salvage, not mining." },
+
+    // Unverified: kept for reference only, never used to identify anything (3000 is the generic FPS code).
+    { "name": "Carinite", "baseRS": 3000, "kind": "FpsDeposit", "contexts": [ "Surface" ], "category": "Hand mining",
+      "experimental": true, "notes": "Hathor caves. SC Wiki lists 3000; no unique RS verified." }
   ]
 }

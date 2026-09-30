@@ -126,6 +126,7 @@ As regiões são salvas como **porcentagem do monitor** (`config/profiles/defaul
 | **Ctrl+Shift+P** | pausar/retomar OCR |
 | **Ctrl+Shift+U** | salvar assinatura desconhecida |
 | **Ctrl+Shift+D** | janela de debug |
+| **Ctrl+Shift+X** | alternar contexto de scan (Auto → Space → Surface) |
 
 Hotkeys são editáveis em `config/settings.json` → `hotkeys` (formato `"Ctrl+Alt+F9"`). Se alguma estiver em uso por outro programa, isso é registrado em `config/app.log`.
 
@@ -143,6 +144,33 @@ Hotkeys são editáveis em `config/settings.json` → `hotkeys` (formato `"Ctrl+
 Cores por prioridade (verde = very high, ciano = high, amarelo = conditional, cinza = common, laranja = ambíguo, roxo = desconhecido) **sempre acompanhadas de texto e ícones** (★★ ★ ◆ · ⚠ ?).
 
 Depois que o RS some da tela o último resultado fica visível por `holdSeconds` (4 s) marcado como "last seen".
+
+### Tipos de sinal e contexto de scan
+
+O RS nem sempre é um minério. O banco tem 5 classes:
+
+| Classe | RS base | O overlay mostra |
+|---|---|---|
+| **Minério** (26) | 3170 Quantainium … 4300 Ice | `GOLD · 3 ROCKS · ★★ VERY HIGH PRIORITY` |
+| **Tipo de asteroide** (espaço) | I 4000 · C 4700 · S 4720 · P 4750 · M 4850 · Q 4870 · E 4900 | `Q-TYPE ASTEROID · ◌ COMPOSITION UNKNOWN · Approach and scan` |
+| **Depósito FPS** (superfície) | 3000 | `FPS DEPOSIT · ◌ MINERAL NOT IDENTIFIED BY RS` + minerais possíveis |
+| **Depósito ROC** (superfície) | 4000 | `ROC DEPOSIT · …` |
+| **Salvage** | 2000 | `SALVAGE PANEL · ✕ NOT MINING` (esmaecido) |
+
+Todos multiplicam (N × base). **Carinite (3000)** fica no banco como `experimental`: nunca é usada para identificar nada, pois 3000 é o código genérico de FPS.
+
+**Contexto de scan** (`Ctrl+Shift+X` alterna, ou Settings): `Auto` / `Space` / `Surface`. Ele elimina o impossível: no espaço não há depósitos FPS/ROC, e na superfície não há tipos de asteroide. Exemplo: `4000` em Auto é **ambíguo** (I-Type / ROC / 2 salvage); em Space é I-Type; em Surface é ROC.
+
+**Clusters mistos** (`matcher.mixedClusters`): o scanner soma sinais diferentes, ex. `31185 = Stileron + 7 ROC`. O resolver testa `A×n + B×m` com três salvaguardas:
+- **priors**: um cluster homogêneo de minério ganha de uma soma mista igualmente exata (`7170 = Gold×2` vence `Quantainium + ROC`, que aparece como alternativa de ~7%);
+- **soma exata**: mistos exigem erro 0 (`mixedMaxAbsoluteError`), porque com ~36 sinais quase todo número fica a ±5 de alguma soma;
+- **modo**: `CrossKind` (padrão: minério + não-minério), `All` (inclui minério + minério, que deixa muita leitura ambígua) ou `Off`.
+
+Priors ajustáveis em `config/settings.json → matcher`: `orePrior` 1.0, `asteroidTypePrior` 0.8, `rocDepositPrior` 0.8, `fpsDepositPrior` 0.6, `salvagePrior` 0.15, `mixedPrior` 0.1.
+
+Importante para o OCR: como somas mistas "explicam" quase qualquer número, uma leitura errada (`15,420` → `16,420`) poderia ganhar explicação. Por isso o pipeline só para cedo com uma explicação **simples** (cluster homogêneo, leitura limpa); explicações mistas competem com as leituras das outras variantes.
+
+**Localização (futuro):** cada sinal já tem um campo `systems` (Stanton/Pyro/Nyx) reservado. Quando houver dados por local, o resolver poderá eliminar depósitos impossíveis, como faz o Bedrock.
 
 ### Como a identificação funciona
 
@@ -269,7 +297,8 @@ Isso é **verificado automaticamente**: `tests/MiningAssistant.Tests/AntiCheatSa
 - A precisão depende da calibração: ROI muito grande com outros números pode confundir (o app prioriza números com rótulo "RS" e que batem com minérios, mas não é mágica). Use o Debug Mode.
 - O modo "imagem inteira" (screenshot sem perfil) é mais fraco que o modo ROI, porque o texto fica pequeno demais para o OCR sem ampliação.
 - Os valores de RS mudam entre patches: mantenha `materials.json` atualizado; use *Save Unknown Signature*.
-- Alguns múltiplos coincidem quase exatamente (ex.: 6×Gold = 21510 e 5×Ice = 21500). Nesses casos o app mostra **POSSIBLE** com os dois em vez de chutar.
+- Alguns múltiplos coincidem (ex.: 6×Gold = 21510 e 5×Ice = 21500; 5×Savrilium = 4×ROC = 16000; 3×ROC = 4×FPS = 12000). Nesses casos o app mostra **POSSIBLE** com as opções em vez de chutar; definir o contexto de scan resolve boa parte.
+- Os códigos de tipo de asteroide, depósitos e salvage vêm de pesquisa em bases da comunidade (Prospector Index/UEX, STARVEIN, SCMINER, SC Wiki API) para 4.10/4.10.1, e ainda não foram confirmados por captura própria deste app. Use *Save Unknown Signature* para validar.
 - O overlay é excluído das capturas de tela por padrão (`overlay.hideFromCapture`), então não aparece em OBS/prints. Se desligar para streaming, mantenha-o longe da ROI do RS.
 - O modo *Detailed Mining* e o analisador de dificuldade da Prospector ainda não foram implementados.
 

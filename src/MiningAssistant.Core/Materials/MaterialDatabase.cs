@@ -12,7 +12,10 @@ public sealed class MaterialDatabase
     [System.Text.Json.Serialization.JsonIgnore]
     public string? SourcePath { get; set; }
 
-    public IEnumerable<Material> Enabled => Materials.Where(m => m.Enabled && m.BaseRS > 0);
+    /// <summary>Signals usable for identification (enabled, verified).</summary>
+    public IEnumerable<Material> Enabled => Materials.Where(m => m.Enabled && !m.Experimental && m.BaseRS > 0);
+
+    public IEnumerable<Material> Ores => Enabled.Where(m => m.IsOre);
 
     private static readonly Regex RawSuffix = new(@"\s*(\(\s*)?(RAW|ORE)(\s*\))?\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -46,8 +49,9 @@ public sealed class MaterialDatabase
             problems.Add($"{m.Name}: baseRS must be > 0.");
         foreach (var g in Materials.GroupBy(m => m.Name, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1))
             problems.Add($"Duplicate material name: {g.Key}");
-        foreach (var g in Enabled.GroupBy(m => m.BaseRS).Where(g => g.Count() > 1))
-            problems.Add($"Duplicate baseRS {g.Key}: {string.Join(", ", g.Select(m => m.Name))}");
+        // Different kinds may share a value (4000 = I-Type asteroid and ROC deposit); the same kind may not.
+        foreach (var g in Enabled.GroupBy(m => (m.Kind, m.BaseRS)).Where(g => g.Count() > 1))
+            problems.Add($"Duplicate {g.Key.Kind} baseRS {g.Key.BaseRS}: {string.Join(", ", g.Select(m => m.Name))}");
         return problems;
     }
 }

@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Text.RegularExpressions;
 using MiningAssistant.Core;
 using MiningAssistant.Core.Matching;
+using MiningAssistant.Core.Materials;
 using MiningAssistant.Core.Roi;
 using MiningAssistant.Core.Settings;
 using MiningAssistant.Vision.Ocr;
@@ -54,6 +55,8 @@ public class RealScreenshotTests
         var taranite = m.Match(7110);
         Assert.Equal(("Taranite", 2), (taranite.Best!.Material.Name, taranite.Best.RockCount));
 
-        Assert.Equal(MatchStatus.Unknown, m.Match(2000).Status); // not a ship-mining signature
+        var salvage = m.Match(2000); // not mining: a salvage panel, never an "unknown ore"
+        Assert.Equal(MatchStatus.Exact, salvage.Status);
+        Assert.Equal(SignalKind.Salvage, salvage.Best!.Material.Kind);
     }
 }

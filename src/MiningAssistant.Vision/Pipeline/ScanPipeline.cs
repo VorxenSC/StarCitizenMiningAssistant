@@ -103,14 +103,30 @@ public sealed class ScanPipeline
                 bestMatch = match;
                 if (keepDebugImage) png = ImageOps.ToPng(prepared);
             }
-            if (match is { Status: not MatchStatus.Unknown } && reading.Chosen!.Substitutions == 0) break;
+            // Only a simple (homogeneous, non-ambiguous) explanation of a clean read ends the search early.
+            // Mixed sums explain almost anything — including OCR mistakes like 15,420 → 16,420 — so they
+            // must compete with the other variants' readings.
+            if (IsSimple(match) && reading.Chosen!.Substitutions == 0) break;
             if (reading.RS is int v && !seen.Add(v)) break;
         }
 
         return new FrameAnalysis(attempts, best!, bestMatch, total.Elapsed, png);
     }
 
-    private static int Score(SignatureReading r, MatchResult? m) =>
-        r.Chosen is null ? 0
-        : (m is { Status: not MatchStatus.Unknown } ? 100 : 10) - r.Chosen.Substitutions;
+    private static bool IsSimple(MatchResult? m) => m is { IsMatch: true, Best.IsMixed: false };
+
+    /// <summary>How believable a reading is: simple ore > simple other signal > ambiguous/mixed > unexplained.</summary>
+    private static int Score(SignatureReading r, MatchResult? m)
+    {
+        if (r.Chosen is null) return 0;
+        var s = m switch
+        {
+            { IsMatch: true, Best: { IsMixed: false, Material.IsOre: true } } => 100,
+            { IsMatch: true, Best.IsMixed: false } => 80,
+            { Status: MatchStatus.Ambiguous } when m.Candidates.Any(c => !c.IsMixed) => 60,
+            { Status: not MatchStatus.Unknown } => 40,
+            _ => 10,
+        };
+        return s - r.Chosen.Substitutions;
+    }
 }

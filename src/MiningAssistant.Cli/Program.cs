@@ -30,6 +30,7 @@ bool Flag(string name) => cliArgs.Remove(name);
 var version = Opt("--version") ?? "default";
 var profilePath = Opt("--profile");
 var upscaleOpt = Opt("--upscale");
+var contextOpt = Opt("--context");
 var preprocessOpt = Opt("--preprocess");
 var dumpDir = Opt("--dump");
 if (Opt("--white-threshold") is { } wt)
@@ -41,6 +42,7 @@ if (cliArgs.Count == 0) return Usage();
 var db = MaterialDatabaseLoader.LoadForVersion(paths.DataRoot, version);
 var settings = new AppSettings { GameVersion = version };
 if (upscaleOpt is not null) settings.Ocr.Upscale = int.Parse(upscaleOpt);
+if (contextOpt is not null) settings.Matcher.Context = Enum.Parse<ScanContext>(contextOpt, true);
 if (preprocessOpt is not null) settings.Ocr.Preprocess = Enum.Parse<PreprocessMode>(preprocessOpt, true);
 var matcher = new SignatureMatcher(db, settings.Matcher);
 
@@ -178,7 +180,7 @@ static void PrintMatch(MatchResult? r, string input)
     if (r is null) { Console.WriteLine($"{input}: not a number"); return; }
     Console.WriteLine($"RS {r.ScannedRS}: {r.Status.ToString().ToUpperInvariant()}");
     foreach (var c in r.Candidates.Take(5))
-        Console.WriteLine($"   {c.Material.Name,-14} ×{c.RockCount,-2} expected {c.ExpectedRS,6}  err {c.Error,2}  confidence {c.Confidence:P0}  [{c.Material.Priority}]");
+        Console.WriteLine($"   {c.Label,-40} expected {c.ExpectedRS,6}  err {c.Error,2}  confidence {c.Confidence,4:P0}  [{c.Material.Kind}{(c.Material.IsOre ? "/" + c.Material.Priority : "")}]");
 }
 
 static int Usage()
@@ -195,6 +197,7 @@ static int Usage()
 
         Options:
           --version <v>    materials database folder under data/ (default: "default")
+          --context <c>    Auto | Space | Surface (rules out signals that cannot appear there)
           --profile <file> ROI profile to crop screenshots (default: profile.roi.json next to the image)
           --whole          ignore profiles; OCR the whole image
           --upscale <n>    ROI upscale factor before OCR (default 3)

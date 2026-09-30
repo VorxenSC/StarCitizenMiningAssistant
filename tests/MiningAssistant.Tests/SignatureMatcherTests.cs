@@ -26,7 +26,21 @@ public class SignatureMatcherTests
         Assert.Equal(MatchStatus.Exact, r.Status);
         Assert.Equal(material, r.Best!.Material.Name);
         Assert.Equal(rocks, r.Best.RockCount);
+        Assert.False(r.Best.IsMixed);
         Assert.Equal(0, r.Best.Error);
+        // Confidence can be < 100% in Auto context: exact mixed sums (e.g. 7170 = Quantainium + ROC) are
+        // listed as low-probability alternatives. It must still clearly dominate.
+        Assert.True(r.Best.Confidence > 0.75, $"confidence {r.Best.Confidence}");
+    }
+
+    [Theory]
+    [InlineData(3585, "Gold", 1)]
+    [InlineData(10755, "Gold", 3)]
+    [InlineData(3870, "Tungsten", 1)]
+    public void Single_explanations_are_fully_confident(int rs, string material, int rocks)
+    {
+        var r = TestData.Matcher(new SignatureMatcherOptions { Context = Core.Materials.ScanContext.Space }).Match(rs);
+        Assert.Equal((material, rocks), (r.Best!.Material.Name, r.Best.RockCount));
         Assert.True(r.Best.Confidence > 0.95, $"confidence {r.Best.Confidence}");
     }
 
@@ -55,7 +69,9 @@ public class SignatureMatcherTests
     [Fact]
     public void Unexplained_signature_is_unknown()
     {
-        var r = _matcher.Match(5000);
+        // Not within tolerance of any N×base, and not a multiple of 5 so no exact mixed sum exists.
+        // (5000 is NOT unknown any more: FPS deposit 3000 + salvage panel 2000.)
+        var r = _matcher.Match(5001);
 
         Assert.Equal(MatchStatus.Unknown, r.Status);
         Assert.Null(r.Best);
@@ -116,7 +132,7 @@ public class SignatureMatcherTests
     [Fact]
     public void Clusters_never_produce_a_confident_wrong_answer()
     {
-        foreach (var m in TestData.Database.Enabled)
+        foreach (var m in TestData.Database.Ores)
         {
             for (var n = 1; n <= 6; n++)
             {

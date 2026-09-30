@@ -13,7 +13,12 @@ public class DatabaseAndProfileTests
     public void Shipped_database_is_valid()
     {
         var db = TestData.Database;
-        Assert.Equal(26, db.Materials.Count);
+        Assert.Equal(26, db.Ores.Count());
+        Assert.Equal(7, db.Enabled.Count(m => m.Kind == SignalKind.AsteroidType));
+        Assert.Contains(db.Enabled, m => m.Kind == SignalKind.RocDeposit && m.BaseRS == 4000);
+        Assert.Contains(db.Enabled, m => m.Kind == SignalKind.FpsDeposit && m.BaseRS == 3000);
+        Assert.Contains(db.Enabled, m => m.Kind == SignalKind.Salvage && m.BaseRS == 2000);
+        Assert.DoesNotContain(db.Enabled, m => m.Name == "Carinite"); // experimental: reference only
         Assert.Empty(db.Validate());
         Assert.Equal(3585, db.FindByName("Gold")!.BaseRS);
         Assert.Equal(MaterialPriority.VeryHigh, db.FindByName("Quantainium")!.Priority);

@@ -26,7 +26,11 @@ public sealed record OverlayView(
     string? ConfidenceLine,
     IReadOnlyList<string> Alternatives,
     bool IsTarget,
-    bool IsHeld)
+    bool IsHeld,
+    /// <summary>What the best explanation is (ore, asteroid type, deposit, salvage); null when not a match.</summary>
+    SignalKind? Signal = null,
+    /// <summary>Extra context line (mixed cluster, "approach and scan", possible minerals...).</summary>
+    string? Note = null)
 {
     public static readonly OverlayView Idle =
         new(OverlayKind.Idle, "", "", "", null, null, null, Array.Empty<string>(), false, false);
@@ -40,10 +44,18 @@ public static class OverlayPresenter
 
     public static string FormatRocks(int n) => n == 1 ? "1 ROCK" : $"{n} ROCKS";
 
+    public static string FormatCount(Candidate c) =>
+        c.IsMixed
+            ? $"{c.RockCount} {c.Material.Unit(c.RockCount)} + {c.SecondaryCount} × {c.Secondary!.Name.ToUpperInvariant()}"
+            : $"{c.RockCount} {c.Material.Unit(c.RockCount)}";
+
+    private static string Alt(Candidate c) => $"{c.Label.ToUpperInvariant()}  {c.Confidence:P0}";
+
     public static OverlayView Build(SessionState state, AppSettings settings)
     {
         if (state.Match is not { } match) return OverlayView.Idle;
         var rsLine = $"RS {FormatRs(match.ScannedRS)}";
+        var targetFilter = settings.TargetOnly && settings.TargetMaterials.Count > 0;
 
         switch (match.Status)
         {
@@ -53,38 +65,52 @@ public static class OverlayPresenter
 
             case MatchStatus.Ambiguous:
             {
-                var alts = match.Candidates.Take(3)
-                    .Select(c => $"{c.Material.Name.ToUpperInvariant()} ×{c.RockCount}  {c.Confidence:P0}")
-                    .ToList();
-                var isTarget = match.Candidates.Take(3).Any(c => IsTarget(c.Material, settings));
-                if (settings.TargetOnly && settings.TargetMaterials.Count > 0 && !isTarget)
-                    return NotTarget(rsLine, state.IsHeld);
-                return new OverlayView(OverlayKind.Ambiguous, "POSSIBLE:", rsLine, "", null, null, null, alts, isTarget, state.IsHeld);
+                var top = match.Candidates.Take(3).ToList();
+                var isTarget = top.Any(c => IsTarget(c, settings));
+                if (targetFilter && !isTarget) return NotTarget(rsLine, state.IsHeld);
+                var note = settings.Matcher.Context == ScanContext.Auto && top.Select(c => c.Material.Kind).Distinct().Count() > 1
+                    ? "Set scan context (Space/Surface) to narrow down"
+                    : null;
+                return new OverlayView(OverlayKind.Ambiguous, "POSSIBLE:", rsLine, "", null, null, null,
+                    top.Select(Alt).ToList(), isTarget, state.IsHeld, null, note);
             }
 
             default:
             {
                 var best = match.Best!;
-                var isTarget = IsTarget(best.Material, settings);
-                if (settings.TargetOnly && settings.TargetMaterials.Count > 0 && !isTarget)
-                    return NotTarget(rsLine, state.IsHeld);
+                var m = best.Material;
+                var isTarget = IsTarget(best, settings);
+                if (targetFilter && !isTarget) return NotTarget(rsLine, state.IsHeld);
 
-                var p = best.Material.Priority;
                 var confidence = settings.Overlay.ShowConfidence && match.Status != MatchStatus.Exact
                     ? $"Confidence {best.Confidence:P0}"
                     : null;
-                var alts = match.Candidates.Skip(1).Take(2)
-                    .Select(c => $"{c.Material.Name.ToUpperInvariant()} ×{c.RockCount}  {c.Confidence:P0}")
-                    .ToList();
-                return new OverlayView(OverlayKind.Match, best.Material.Name.ToUpperInvariant(), rsLine,
-                    FormatRocks(best.RockCount), $"{p.Icon()} {p.Label()}", p, confidence, alts, isTarget, state.IsHeld);
+                var alts = match.Candidates.Skip(1).Take(2).Select(Alt).ToList();
+
+                var (priorityLine, priority, note) = m.Kind switch
+                {
+                    SignalKind.Ore => ($"{m.Priority.Icon()} {m.Priority.Label()}", (MaterialPriority?)m.Priority,
+                        best.IsMixed ? "MIXED CLUSTER" : null),
+                    SignalKind.AsteroidType => ("◌ COMPOSITION UNKNOWN", null, "Approach and scan for composition"),
+                    SignalKind.FpsDeposit or SignalKind.RocDeposit => ("◌ MINERAL NOT IDENTIFIED BY RS", null, ShortNote(m.Notes)),
+                    _ => ("✕ NOT MINING", null, null),
+                };
+
+                return new OverlayView(OverlayKind.Match, m.Name.ToUpperInvariant(), rsLine, FormatCount(best),
+                    priorityLine, priority, confidence, alts, isTarget, state.IsHeld, m.Kind, note);
             }
         }
     }
 
+    private static string? ShortNote(string notes) =>
+        string.IsNullOrWhiteSpace(notes) ? null : notes.Length <= 60 ? notes : notes[..57] + "...";
+
     private static OverlayView NotTarget(string rsLine, bool held) =>
         new(OverlayKind.NotTarget, "NO TARGET", rsLine, "", null, null, null, Array.Empty<string>(), false, held);
 
+    public static bool IsTarget(Candidate c, AppSettings s) =>
+        IsTarget(c.Material, s) || (c.Secondary is { } sec && IsTarget(sec, s));
+
     public static bool IsTarget(Material m, AppSettings s) =>
-        s.TargetMaterials.Any(t => string.Equals(MaterialDatabase.NormalizeName(t), m.Name, StringComparison.OrdinalIgnoreCase));
+        m.IsOre && s.TargetMaterials.Any(t => string.Equals(MaterialDatabase.NormalizeName(t), m.Name, StringComparison.OrdinalIgnoreCase));
 }

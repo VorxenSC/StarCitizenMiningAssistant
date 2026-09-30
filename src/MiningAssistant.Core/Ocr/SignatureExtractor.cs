@@ -28,10 +28,19 @@ public sealed class SignatureExtractor
         var chosen = numbers
             .Where(n => _matcher.IsPlausible(n.Value))
             .OrderByDescending(n => n.HasRsLabel)
-            .ThenByDescending(n => _matcher.Match(n.Value).Status != MatchStatus.Unknown)
+            .ThenByDescending(n => Plausibility(_matcher.Match(n.Value)))
             .ThenBy(n => n.Substitutions)
             .ThenByDescending(n => n.Value)
             .FirstOrDefault();
         return new SignatureReading(chosen, numbers);
     }
+
+    /// <summary>Simple (homogeneous) explanations beat mixed sums, which beat unexplained numbers.</summary>
+    private static int Plausibility(MatchResult m) => m switch
+    {
+        { IsMatch: true, Best.IsMixed: false } => 3,
+        { Status: MatchStatus.Ambiguous } when m.Candidates.Any(c => !c.IsMixed) => 2,
+        { Status: not MatchStatus.Unknown } => 1,
+        _ => 0,
+    };
 }

@@ -59,6 +59,8 @@ public sealed class HotkeySettings
     public string PauseOcr { get; set; } = "Ctrl+Shift+P";
     public string SaveUnknown { get; set; } = "Ctrl+Shift+U";
     public string DebugWindow { get; set; } = "Ctrl+Shift+D";
+    /// <summary>Cycles scan context Auto → Space → Surface.</summary>
+    public string CycleContext { get; set; } = "Ctrl+Shift+X";
 }
 
 public sealed class AppSettings
