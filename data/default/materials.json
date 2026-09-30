@@ -1,0 +1,39 @@
+{
+  // Star Citizen ship-mining radar signatures (RS).
+  // A cluster of N rocks of the same ore shows RS = baseRS x N.
+  // Edit freely: values change between patches. Comments and trailing commas are allowed.
+  //
+  // priority: "VeryHigh" | "High" | "Conditional" | "Common"
+  // notify:   play a sound alert when this material is detected (if Sound Alerts is enabled)
+  // aliases:  extra names the OCR may read (used by the composition/material parser)
+  "gameVersion": "default",
+  "description": "Initial ship-mining RS table. Copy this folder to data/<version>/ to keep per-patch databases.",
+  "materials": [
+    { "name": "Quantainium",   "baseRS": 3170, "priority": "VeryHigh",    "category": "Ore",     "notes": "Volatile cargo - decays, sell quickly.", "enabled": true, "notify": true },
+    { "name": "Stileron",      "baseRS": 3185, "priority": "VeryHigh",    "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Savrilium",     "baseRS": 3200, "priority": "VeryHigh",    "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Ouratite",      "baseRS": 3370, "priority": "VeryHigh",    "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Riccite",       "baseRS": 3385, "priority": "High",        "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Lindinium",     "baseRS": 3400, "priority": "VeryHigh",    "category": "Ore",     "notes": "", "enabled": true, "notify": true },
+    { "name": "Beryl",         "baseRS": 3540, "priority": "High",        "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Taranite",      "baseRS": 3555, "priority": "VeryHigh",    "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Borase",        "baseRS": 3570, "priority": "VeryHigh",    "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Gold",          "baseRS": 3585, "priority": "VeryHigh",    "category": "Ore",     "notes": "", "enabled": true, "notify": true },
+    { "name": "Bexalite",      "baseRS": 3600, "priority": "VeryHigh",    "category": "Ore",     "notes": "", "enabled": true, "notify": true },
+    { "name": "Laranite",      "baseRS": 3825, "priority": "High",        "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Aslarite",      "baseRS": 3840, "priority": "High",        "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Titanium",      "baseRS": 3855, "priority": "Conditional", "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Tungsten",      "baseRS": 3870, "priority": "Conditional", "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Agricium",      "baseRS": 3885, "priority": "High",        "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Torite",        "baseRS": 3900, "priority": "High",        "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Hephaestanite", "baseRS": 4180, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Tin",           "baseRS": 4195, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Quartz",        "baseRS": 4210, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Corundum",      "baseRS": 4225, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Copper",        "baseRS": 4240, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Silicon",       "baseRS": 4255, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Iron",          "baseRS": 4270, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false },
+    { "name": "Aluminum",      "baseRS": 4285, "priority": "Common",      "category": "Ore",     "notes": "", "enabled": true, "notify": false, "aliases": [ "Aluminium" ] },
+    { "name": "Ice",           "baseRS": 4300, "priority": "Common",      "category": "Ice",     "notes": "", "enabled": true, "notify": false }
+  ]
+}

@@ -1,0 +1,35 @@
+using MiningAssistant.Core.Roi;
+
+namespace MiningAssistant.Core.Settings;
+
+/// <summary>
+/// Portable layout next to the executable:
+///   data/&lt;version&gt;/materials.json   (editable material DB)
+///   config/settings.json
+///   config/profiles/&lt;name&gt;.roi.json
+///   unknown_signatures/               (Save Unknown Signature output)
+/// </summary>
+public sealed class AppPaths
+{
+    public string Root { get; }
+    public string DataRoot => Path.Combine(Root, "data");
+    public string ConfigRoot => Path.Combine(Root, "config");
+    public string SettingsFile => Path.Combine(ConfigRoot, "settings.json");
+    public string ProfilesRoot => Path.Combine(ConfigRoot, "profiles");
+    public string UnknownRoot => Path.Combine(Root, "unknown_signatures");
+
+    public AppPaths(string? root = null) => Root = root ?? AppContext.BaseDirectory;
+
+    public string ProfileFile(string name) => Path.Combine(ProfilesRoot, $"{name}.roi.json");
+
+    public AppSettings LoadSettings() => Json.LoadOrCreate<AppSettings>(SettingsFile);
+    public void SaveSettings(AppSettings s) => Json.Save(SettingsFile, s);
+
+    public RoiProfile LoadProfile(string name)
+    {
+        var path = ProfileFile(name);
+        return File.Exists(path) ? Json.Deserialize<RoiProfile>(File.ReadAllText(path)) : new RoiProfile { Name = name };
+    }
+
+    public void SaveProfile(RoiProfile p) => Json.Save(ProfileFile(p.Name), p);
+}
