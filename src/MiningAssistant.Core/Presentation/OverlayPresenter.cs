@@ -30,7 +30,9 @@ public sealed record OverlayView(
     /// <summary>What the best explanation is (ore, asteroid type, deposit, salvage); null when not a match.</summary>
     SignalKind? Signal = null,
     /// <summary>Extra context line (mixed cluster, "approach and scan", possible minerals...).</summary>
-    string? Note = null)
+    string? Note = null,
+    /// <summary>Scan context indicator: "SPACE · auto" (inferred), "SURFACE" (manual) or null (unknown).</summary>
+    string? ContextLabel = null)
 {
     public static readonly OverlayView Idle =
         new(OverlayKind.Idle, "", "", "", null, null, null, Array.Empty<string>(), false, false);
@@ -51,7 +53,17 @@ public static class OverlayPresenter
 
     private static string Alt(Candidate c) => $"{c.Label.ToUpperInvariant()}  {c.Confidence:P0}";
 
-    public static OverlayView Build(SessionState state, AppSettings settings)
+    public static string? ContextLabel(SessionState s) => s.Context switch
+    {
+        ScanContext.Auto => null,
+        _ when s.ContextInferred => $"{s.Context.ToString().ToUpperInvariant()} · auto",
+        _ => s.Context.ToString().ToUpperInvariant(),
+    };
+
+    public static OverlayView Build(SessionState state, AppSettings settings) =>
+        BuildCore(state, settings) is var v && v.Kind != OverlayKind.Idle ? v with { ContextLabel = ContextLabel(state) } : v;
+
+    private static OverlayView BuildCore(SessionState state, AppSettings settings)
     {
         if (state.Match is not { } match) return OverlayView.Idle;
         var rsLine = $"RS {FormatRs(match.ScannedRS)}";
@@ -68,8 +80,8 @@ public static class OverlayPresenter
                 var top = match.Candidates.Take(3).ToList();
                 var isTarget = top.Any(c => IsTarget(c, settings));
                 if (targetFilter && !isTarget) return NotTarget(rsLine, state.IsHeld);
-                var note = settings.Matcher.Context == ScanContext.Auto && top.Select(c => c.Material.Kind).Distinct().Count() > 1
-                    ? "Set scan context (Space/Surface) to narrow down"
+                var note = state.Context == ScanContext.Auto && top.Select(c => c.Material.Kind).Distinct().Count() > 1
+                    ? "Location not detected yet (space/surface)"
                     : null;
                 return new OverlayView(OverlayKind.Ambiguous, "POSSIBLE:", rsLine, "", null, null, null,
                     top.Select(Alt).ToList(), isTarget, state.IsHeld, null, note);

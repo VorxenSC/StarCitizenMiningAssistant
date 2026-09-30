@@ -51,24 +51,33 @@ public sealed class LiveScanner : IDisposable
     public bool Paused { get; set; }
     public ScannerConfig Config => _config;
 
+    // Survives Reconfigure(): applying settings must not forget where the player is.
+    private ContextInference _inference;
+
     public LiveScanner(ScannerConfig config, IScreenCapture? capture = null)
     {
         _capture = capture ?? new GdiScreenCapture();
-        (_config, _pipeline, _session) = Build(config);
+        _inference = new ContextInference(TimeSpan.FromMinutes(config.Settings.ContextMemoryMinutes));
+        (_config, _pipeline, _session) = Build(config, _inference);
     }
 
-    private static (ScannerConfig, ScanPipeline, ScanSession) Build(ScannerConfig c)
+    private static (ScannerConfig, ScanPipeline, ScanSession) Build(ScannerConfig c, ContextInference inference)
     {
         var matcher = new SignatureMatcher(c.Database, c.Settings.Matcher);
         var pipeline = new ScanPipeline(c.Ocr, matcher, c.Settings.Ocr);
         var session = new ScanSession(matcher, c.Settings.VoteWindow, c.Settings.VoteMinAgreement,
-            TimeSpan.FromSeconds(c.Settings.HoldSeconds));
+            TimeSpan.FromSeconds(c.Settings.HoldSeconds), inference);
         return (c, pipeline, session);
     }
 
     public void Reconfigure(ScannerConfig config)
     {
-        var built = Build(config);
+        if (Math.Abs(_inference.Memory.TotalMinutes - config.Settings.ContextMemoryMinutes) > 0.01)
+        {
+            var fresh = new ContextInference(TimeSpan.FromMinutes(config.Settings.ContextMemoryMinutes));
+            _inference = fresh;
+        }
+        var built = Build(config, _inference);
         lock (_roiLock)
         {
             (_config, _pipeline, _session) = built;

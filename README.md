@@ -159,7 +159,9 @@ O RS nem sempre é um minério. O banco tem 5 classes:
 
 Todos multiplicam (N × base). **Carinite (3000)** fica no banco como `experimental`: nunca é usada para identificar nada, pois 3000 é o código genérico de FPS.
 
-**Contexto de scan** (`Ctrl+Shift+X` alterna, ou Settings): `Auto` / `Space` / `Surface`. Ele elimina o impossível: no espaço não há depósitos FPS/ROC, e na superfície não há tipos de asteroide. Exemplo: `4000` em Auto é **ambíguo** (I-Type / ROC / 2 salvage); em Space é I-Type; em Surface é ROC.
+**Contexto de scan**: `Auto` (padrão) / `Space` / `Surface`. Ele elimina o impossível: no espaço não há depósitos FPS/ROC, e na superfície não há tipos de asteroide. Exemplo: `4000` é I-Type no espaço e ROC no solo.
+
+Em **Auto o app detecta sozinho** onde você está, usando só os códigos que aparecem na tela. Um asteroide C/S/P/M/Q/E-Type (4700–4900) revela **espaço**; um depósito FPS (3000) revela **solo**. Só ensina um código estável, exato e lido sem correção de OCR. Minérios e salvage não ensinam nada, porque aparecem nos dois lugares. O contexto aprendido vale por `contextMemoryMinutes` (10), é sobrescrito por um sinal contrário mais novo e aparece no canto do overlay como `SPACE · auto`. Até o primeiro sinal revelador, valores como `4000` aparecem como **POSSIBLE**. `Ctrl+Shift+X` força Space/Surface manualmente, se quiser.
 
 **Clusters mistos** (`matcher.mixedClusters`): o scanner soma sinais diferentes, ex. `31185 = Stileron + 7 ROC`. O resolver testa `A×n + B×m` com três salvaguardas:
 - **priors**: um cluster homogêneo de minério ganha de uma soma mista igualmente exata (`7170 = Gold×2` vence `Quantainium + ROC`, que aparece como alternativa de ~7%);

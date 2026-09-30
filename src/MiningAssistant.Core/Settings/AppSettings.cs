@@ -97,6 +97,11 @@ public sealed class AppSettings
     public int VoteWindow { get; set; } = 5;
     public int VoteMinAgreement { get; set; } = 3;
     public double HoldSeconds { get; set; } = 4;
+    /// <summary>
+    /// With scan context Auto, how long a context learned from a revealing signal (asteroid type → Space,
+    /// FPS deposit → Surface) is remembered.
+    /// </summary>
+    public double ContextMemoryMinutes { get; set; } = 10;
     /// <summary>Skip OCR when the ROI pixels did not change since the last frame.</summary>
     public bool SkipUnchangedFrames { get; set; } = true;
 

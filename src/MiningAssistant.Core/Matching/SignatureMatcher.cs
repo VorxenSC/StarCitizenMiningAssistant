@@ -145,9 +145,9 @@ public sealed class SignatureMatcher
     /// Match a value that required OCR letter→digit substitutions ("358S").
     /// Such a read can never be Exact, and each substitution lowers confidence.
     /// </summary>
-    public MatchResult Match(int scannedRS, int ocrSubstitutions)
+    public MatchResult Match(int scannedRS, int ocrSubstitutions, ScanContext? context = null)
     {
-        var r = Match(scannedRS);
+        var r = Match(scannedRS, context);
         if (ocrSubstitutions <= 0 || r.Candidates.Count == 0) return r;
 
         var factor = Math.Pow(Options.SubstitutionConfidenceFactor, ocrSubstitutions);
@@ -156,12 +156,16 @@ public sealed class SignatureMatcher
         return new MatchResult(scannedRS, status, candidates);
     }
 
-    public MatchResult Match(int scannedRS)
+    public MatchResult Match(int scannedRS) => Match(scannedRS, (ScanContext?)null);
+
+    /// <summary>Resolves in <paramref name="context"/> (defaults to <see cref="SignatureMatcherOptions.Context"/>).</summary>
+    public MatchResult Match(int scannedRS, ScanContext? context)
     {
         if (!IsPlausible(scannedRS)) return MatchResult.Unknown(scannedRS);
 
         var o = Options;
-        var signals = _all.Where(m => m.AppearsIn(o.Context)).ToList();
+        var ctx = context ?? o.Context;
+        var signals = _all.Where(m => m.AppearsIn(ctx)).ToList();
         var raw = new List<(Candidate c, double rank)>();
 
         // 1. Homogeneous clusters.
