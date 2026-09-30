@@ -37,6 +37,11 @@ public sealed class OverlaySettings
     public double Scale { get; set; } = 1.0;
     public bool ShowConfidence { get; set; } = true;
     public bool Visible { get; set; } = true;
+    /// <summary>
+    /// Exclude the overlay from screen capture so it can never be OCR'd back in.
+    /// Turn off if you want the overlay to appear in OBS/recordings (then keep it away from the RS region).
+    /// </summary>
+    public bool HideFromCapture { get; set; } = true;
 }
 
 public sealed class HotkeySettings
