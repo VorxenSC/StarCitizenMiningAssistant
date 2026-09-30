@@ -49,6 +49,9 @@ public sealed class LiveScanner : IDisposable
     public event Action<ScanFrame>? FrameProcessed;
 
     public bool Paused { get; set; }
+
+    /// <summary>Optional local evidence of missed/unknown reads (see AppSettings.SaveMissedReads).</summary>
+    public MissedReadRecorder? Recorder { get; set; }
     public ScannerConfig Config => _config;
 
     // Survives Reconfigure(): applying settings must not forget where the player is.
@@ -66,7 +69,7 @@ public sealed class LiveScanner : IDisposable
         var matcher = new SignatureMatcher(c.Database, c.Settings.Matcher);
         var pipeline = new ScanPipeline(c.Ocr, matcher, c.Settings.Ocr);
         var session = new ScanSession(matcher, c.Settings.VoteWindow, c.Settings.VoteMinAgreement,
-            TimeSpan.FromSeconds(c.Settings.HoldSeconds), inference);
+            TimeSpan.FromSeconds(c.Settings.HoldSeconds), inference, c.Settings.VoteFastAgreement);
         return (c, pipeline, session);
     }
 
@@ -172,16 +175,25 @@ public sealed class LiveScanner : IDisposable
             analysis = await pipeline.AnalyzeRoiAsync(roi, config.Settings.DebugMode, ct).ConfigureAwait(false);
             _lastHash = hash;
             _lastAnalysis = analysis;
-            _ocrTimes.Enqueue(now);
+            if (!analysis.NoText) _ocrTimes.Enqueue(now);
             lock (_roiLock)
             {
                 _lastRoi?.Dispose();
                 _lastRoi = roi;
             }
+            // Indicator visible but nothing readable: keep the evidence.
+            if (config.Settings.SaveMissedReads && !analysis.NoText && analysis.Reading.RS is null)
+                Recorder?.Record("missed", roi, analysis.RawText, now);
         }
 
         while (_ocrTimes.Count > 0 && now - _ocrTimes.Peek() > TimeSpan.FromSeconds(5)) _ocrTimes.Dequeue();
         var state = session.Observe(analysis.Reading.RS, now, analysis.Reading.Chosen?.Substitutions ?? 0);
+
+        if (config.Settings.SaveMissedReads && state is { IsNew: true, Match.Status: MatchStatus.Unknown } && Recorder is not null)
+        {
+            using var last = CloneLastRoi();
+            if (last is not null) Recorder.Record($"unknown_rs{state.StableRS}", last, analysis.RawText, now);
+        }
         return new ScanFrame(now, analysis, state, session.VoteBuffer, rect, captureTime, total.Elapsed,
             _ocrTimes.Count / 5.0, null);
     }

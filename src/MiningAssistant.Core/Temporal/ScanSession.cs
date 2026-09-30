@@ -34,13 +34,34 @@ public sealed class ScanSession
     private ScanContext _lastContext;
     private DateTime _lastSeen;
 
+    private readonly int _fastVotes;
+
+    /// <param name="fastVotes">
+    /// Votes enough for a clean read with a simple explanation (e.g. 15420 = Titanium ×4). Values that
+    /// only a mixed sum or nothing explains still need <paramref name="minVotes"/>. Keeps the overlay
+    /// responsive when OCR alternates on hard backgrounds, without letting glitches through.
+    /// </param>
     public ScanSession(SignatureMatcher matcher, int voteWindow = 5, int minVotes = 3, TimeSpan? hold = null,
-        ContextInference? inference = null)
+        ContextInference? inference = null, int fastVotes = 2)
     {
         _matcher = matcher;
         _voter = new TemporalVoter<int>(voteWindow, minVotes);
         _hold = hold ?? TimeSpan.FromSeconds(4);
         _inference = inference ?? new ContextInference();
+        _fastVotes = Math.Clamp(fastVotes, 1, Math.Max(1, minVotes));
+    }
+
+    private int? StableValue(DateTime now)
+    {
+        var vote = _voter.Current(now);
+        if (vote.Value is int v) return v;
+
+        var leader = _voter.Leader(now);
+        if (leader.Value is not int candidate || leader.Votes < _fastVotes) return null;
+        if (_minSubs.GetValueOrDefault(candidate) > 0) return null;
+        var ctx = _matcher.Options.Context == ScanContext.Auto ? _inference.Current(now) ?? ScanContext.Auto : _matcher.Options.Context;
+        var m = _matcher.Match(candidate, ctx);
+        return m is { IsMatch: true, Best.IsMixed: false } ? candidate : null;
     }
 
     public IReadOnlyList<int?> VoteBuffer => _voter.Snapshot();
@@ -62,8 +83,8 @@ public sealed class ScanSession
         var inWindow = _voter.Snapshot().OfType<int>().ToHashSet();
         foreach (var k in _minSubs.Keys.Where(k => !inWindow.Contains(k)).ToList()) _minSubs.Remove(k);
 
-        var vote = _voter.Current(now);
-        if (vote.Value is int stable)
+        var vote = _voter.Leader(now);
+        if (StableValue(now) is int stable)
         {
             var subs = _minSubs.GetValueOrDefault(stable);
             var isNew = _last?.ScannedRS != stable;

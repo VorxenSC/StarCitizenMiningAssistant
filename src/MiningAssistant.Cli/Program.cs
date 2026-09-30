@@ -137,6 +137,26 @@ switch (cliArgs[0].ToLowerInvariant())
         return 0;
     }
 
+    case "textstats":
+    {
+        // Calibrates the "is there an RS indicator?" detector: ROI vs empty regions shifted below it.
+        foreach (var file in ExpandImages(cliArgs[1]))
+        {
+            var profile = ResolveProfile(file);
+            if (profile?.Get(RoiNames.RS) is not { } region) continue;
+            using var bmp = new Bitmap(file);
+            var r = region.ToPixels(bmp.Width, bmp.Height);
+            foreach (var dy in new[] { 0, 120, 250, 400, 600 })
+            {
+                var rr = r with { Y = Math.Min(bmp.Height - r.Height, r.Y + dy) };
+                using var crop = MiningAssistant.Vision.Imaging.ImageOps.Crop(bmp, rr);
+                var (c, f) = MiningAssistant.Vision.Imaging.ImageOps.TextStats(crop);
+                Console.WriteLine($"{Path.GetFileName(file),-50} dy={dy,4}  contrast {c,3}  bright {f,7:P2}  → {(MiningAssistant.Vision.Imaging.ImageOps.HasText(crop) ? "TEXT" : "empty")}");
+            }
+        }
+        return 0;
+    }
+
     case "synth":
     {
         var outDir = cliArgs.Count > 1 ? cliArgs[1] : Path.Combine(FindRepoRoot() ?? ".", "test_images", "synthetic");

@@ -39,6 +39,13 @@ public sealed class TemporalVoter<T> where T : struct, IEquatable<T>
 
     public Vote<T> Current(DateTime now)
     {
+        var leader = Leader(now);
+        return leader.Votes >= MinVotes ? leader : new Vote<T>(null, leader.Votes, leader.WindowCount);
+    }
+
+    /// <summary>The most voted value in the window regardless of <see cref="MinVotes"/>.</summary>
+    public Vote<T> Leader(DateTime now)
+    {
         Prune(now);
         var best = _window
             .Where(w => w.value.HasValue)
@@ -48,9 +55,9 @@ public sealed class TemporalVoter<T> where T : struct, IEquatable<T>
             .ThenByDescending(g => g.last)
             .FirstOrDefault();
 
-        return best.votes >= MinVotes
+        return best.votes > 0
             ? new Vote<T>(best.value, best.votes, _window.Count)
-            : new Vote<T>(null, best.votes, _window.Count);
+            : new Vote<T>(null, 0, _window.Count);
     }
 
     private void Prune(DateTime now)

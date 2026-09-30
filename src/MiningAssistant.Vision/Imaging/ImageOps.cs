@@ -17,6 +17,11 @@ public enum Variant
     /// space background (low red) goes dark. For when the RS code is rendered amber in game.
     /// </summary>
     Amber,
+    /// <summary>
+    /// min(R,G,B) + contrast stretch: only white-ish pixels stay bright. Rescues white digits over
+    /// bright colored backgrounds (blue sky, brown terrain) where the blue/warm channels fail.
+    /// </summary>
+    Whiteness,
     /// <summary>Max-channel grayscale: keeps colored text bright.</summary>
     Grayscale,
     /// <summary>Max-channel grayscale + Otsu threshold.</summary>
@@ -36,9 +41,10 @@ public static class ImageOps
         {
             Variant.WhiteText => Channel.Blue,
             Variant.Amber => Channel.Warm,
+            Variant.Whiteness => Channel.Min,
             _ => Channel.Max,
         };
-        var stretch = variant is Variant.WhiteText or Variant.Amber;
+        var stretch = variant is Variant.WhiteText or Variant.Amber or Variant.Whiteness;
         using var trimmed = stretch ? TrimToBrightText(src, channel) : null;
         using var scaled = Scale(trimmed ?? src, scale);
         var gray = ToGrayBytes(scaled, out var w, out var h, channel);
@@ -148,7 +154,7 @@ public static class ImageOps
         finally { bmp.UnlockBits(data); }
     }
 
-    public enum Channel { Max, Blue, Warm }
+    public enum Channel { Max, Blue, Warm, Min }
 
     public static unsafe byte[] ToGrayBytes(Bitmap bmp, out int w, out int h, Channel channel = Channel.Max)
     {
@@ -171,6 +177,7 @@ public static class ImageOps
                     {
                         Channel.Blue => p[0],
                         Channel.Warm => Math.Min(p[1], p[2]),
+                        Channel.Min => Math.Min(p[0], Math.Min(p[1], p[2])),
                         _ => Math.Max(p[0], Math.Max(p[1], p[2])),
                     };
                 }
@@ -198,6 +205,28 @@ public static class ImageOps
         }
         finally { bmp.UnlockBits(data); }
         return bmp;
+    }
+
+    /// <summary>
+    /// Cheap "is there any HUD text here?" test used to skip OCR on empty frames:
+    /// contrast between background (median) and the brightest pixels, and the fraction of bright pixels.
+    /// Stars are tiny (&lt;0.2%); the RS plate with digits covers a few percent.
+    /// </summary>
+    public static (int contrast, double brightFraction) TextStats(Bitmap roi)
+    {
+        var g = ToGrayBytes(roi, out _, out _, Channel.Max);
+        var lo = Percentile(g, 0.50);
+        var hi = Percentile(g, 0.995);
+        var t = lo + (hi - lo) / 2;
+        var bright = 0;
+        foreach (var b in g) if (b > t) bright++;
+        return (hi - lo, bright / (double)g.Length);
+    }
+
+    public static bool HasText(Bitmap roi, int minContrast = 45, double minFraction = 0.003)
+    {
+        var (c, f) = TextStats(roi);
+        return c >= minContrast && f >= minFraction;
     }
 
     /// <summary>Fraction between background (median) and text peak used by <see cref="Variant.WhiteText"/>.</summary>

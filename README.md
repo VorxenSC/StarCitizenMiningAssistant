@@ -127,6 +127,11 @@ As regiões são salvas como **porcentagem do monitor** (`config/profiles/defaul
 | **Ctrl+Shift+U** | salvar assinatura desconhecida |
 | **Ctrl+Shift+D** | janela de debug |
 | **Ctrl+Shift+X** | alternar contexto de scan (Auto → Space → Surface) |
+| **Ctrl+Shift+O** | mover o overlay: arraste o cartão; aperte de novo ou dê duplo clique para travar |
+
+**Mover o overlay:** aperte `Ctrl+Shift+O` (ou Settings → *Move overlay*, ou o menu da bandeja). O cartão ganha borda amarela e fica clicável. Libere o mouse do jogo (ex.: `Alt+Tab`), arraste para onde quiser e trave com `Ctrl+Shift+O` ou duplo clique. A posição fica salva (modo manual). Fora do modo mover, o overlay continua transparente ao clique e nunca rouba o foco do jogo. Para voltar a colá-lo no indicador RS, marque "Place next to the RS indicator" em Settings.
+
+**Leituras perdidas:** se o indicador RS aparece mas não é lido, ou se surge um RS desconhecido, o app salva o recorte (só a pequena área do RS) em `diagnostics/missed/`: no máximo 1 a cada 3 s e até 300 arquivos, sem nada sair do PC. Desligue com `saveMissedReads: false`. Mande essa pasta para melhorarmos o reconhecimento.
 
 Hotkeys são editáveis em `config/settings.json` → `hotkeys` (formato `"Ctrl+Alt+F9"`). Se alguma estiver em uso por outro programa, isso é registrado em `config/app.log`.
 

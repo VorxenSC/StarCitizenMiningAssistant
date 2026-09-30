@@ -31,7 +31,7 @@ public class AntiCheatSafetyTests
     private static readonly HashSet<string> AllowedNative = new()
     {
         "EnumDisplayMonitors", "GetMonitorInfo", "SetProcessDpiAwarenessContext",
-        "GetWindowLongPtrW", "SetWindowLongPtrW", "SetWindowPos", "SetWindowDisplayAffinity",
+        "GetWindowLongPtrW", "SetWindowLongPtrW", "SetWindowPos", "SetWindowDisplayAffinity", "GetWindowRect",
         // Hotkeys: passive keyboard Raw Input sink (receive-only; no hook, keys are not blocked or altered).
         "RegisterRawInputDevices", "GetRawInputData",
     };

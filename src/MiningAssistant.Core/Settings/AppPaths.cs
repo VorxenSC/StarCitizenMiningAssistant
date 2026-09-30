@@ -17,6 +17,7 @@ public sealed class AppPaths
     public string SettingsFile => Path.Combine(ConfigRoot, "settings.json");
     public string ProfilesRoot => Path.Combine(ConfigRoot, "profiles");
     public string UnknownRoot => Path.Combine(Root, "unknown_signatures");
+    public string MissedReadsRoot => Path.Combine(Root, "diagnostics", "missed");
 
     public AppPaths(string? root = null) => Root = root ?? AppContext.BaseDirectory;
 

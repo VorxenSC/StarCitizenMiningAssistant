@@ -19,7 +19,9 @@ public sealed record FrameAnalysis(
     /// <summary>PNG of the image fed to OCR in the chosen attempt; only when requested (debug).</summary>
     byte[]? ProcessedPng,
     /// <summary>True when OCR was skipped because the ROI pixels did not change.</summary>
-    bool Reused = false)
+    bool Reused = false,
+    /// <summary>True when OCR was skipped because the ROI holds no HUD text at all (no RS indicator).</summary>
+    bool NoText = false)
 {
     public string RawText => string.Join("\n", Attempts.Select(a => $"[{a.Variant}] {a.Text.Replace("\n", " ⏎ ")}"));
 }
@@ -50,7 +52,7 @@ public sealed class ScanPipeline
             PreprocessMode.Binarize => new[] { Variant.Binarized },
             PreprocessMode.WhiteText => new[] { Variant.WhiteText },
             PreprocessMode.Amber => new[] { Variant.Amber },
-            _ => new[] { Variant.WhiteText, Variant.Amber, Variant.Grayscale, Variant.Binarized },
+            _ => new[] { Variant.WhiteText, Variant.Amber, Variant.Whiteness, Variant.Grayscale, Variant.Binarized },
         };
         foreach (var v in variants) yield return (v, scale);
         // Last resort only reached when nothing matched or agreed: a different scale often fixes
@@ -58,8 +60,15 @@ public sealed class ScanPipeline
         if (_settings.Preprocess == PreprocessMode.Auto && scale > 2) yield return (Variant.Grayscale, scale - 1);
     }
 
-    public Task<FrameAnalysis> AnalyzeRoiAsync(Bitmap roi, bool keepDebugImage, CancellationToken ct = default) =>
-        AnalyzeAsync(roi, _settings.Upscale, keepDebugImage, ct);
+    public Task<FrameAnalysis> AnalyzeRoiAsync(Bitmap roi, bool keepDebugImage, CancellationToken ct = default)
+    {
+        // No RS indicator on screen (just space/terrain): skip OCR entirely. Measured on real 1440p
+        // captures: indicator contrast 180–227 vs empty regions 3–24.
+        if (_settings.SkipEmptyRoi && !ImageOps.HasText(roi))
+            return Task.FromResult(new FrameAnalysis(Array.Empty<OcrAttempt>(),
+                new SignatureReading(null, Array.Empty<NumberToken>()), null, TimeSpan.Zero, null, NoText: true));
+        return AnalyzeAsync(roi, _settings.Upscale, keepDebugImage, ct);
+    }
 
     /// <summary>
     /// Offline analysis of a saved screenshot. Uses the profile's RS region when calibrated,

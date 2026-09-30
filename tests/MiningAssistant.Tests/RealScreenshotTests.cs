@@ -45,6 +45,22 @@ public class RealScreenshotTests
     }
 
     [Fact]
+    public void Indicator_detector_separates_rs_plate_from_empty_space()
+    {
+        var dir = RealDir();
+        var profile = Json.Deserialize<RoiProfile>(File.ReadAllText(Path.Combine(dir, "profile.roi.json")));
+        foreach (var file in Directory.GetFiles(dir, "*.jpg"))
+        {
+            using var bmp = new Bitmap(file);
+            var r = profile.Get(RoiNames.RS)!.ToPixels(bmp.Width, bmp.Height);
+            using var withPlate = MiningAssistant.Vision.Imaging.ImageOps.Crop(bmp, r);
+            using var empty = MiningAssistant.Vision.Imaging.ImageOps.Crop(bmp, r with { Y = r.Y + 120 });
+            Assert.True(MiningAssistant.Vision.Imaging.ImageOps.HasText(withPlate), Path.GetFileName(file));
+            Assert.False(MiningAssistant.Vision.Imaging.ImageOps.HasText(empty), Path.GetFileName(file));
+        }
+    }
+
+    [Fact]
     public void Real_values_resolve_to_the_right_answer()
     {
         var m = TestData.Matcher();

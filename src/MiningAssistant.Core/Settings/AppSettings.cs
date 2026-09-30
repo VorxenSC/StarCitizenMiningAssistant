@@ -32,6 +32,8 @@ public sealed class OcrSettings
     /// </summary>
     public int Upscale { get; set; } = 4;
     public PreprocessMode Preprocess { get; set; } = PreprocessMode.Auto;
+    /// <summary>Skip OCR when the ROI contains no HUD text at all (saves CPU while nothing is scanned).</summary>
+    public bool SkipEmptyRoi { get; set; } = true;
     public NumberNormalizerOptions Normalizer { get; set; } = new();
 }
 
@@ -82,6 +84,8 @@ public sealed class HotkeySettings
     public string DebugWindow { get; set; } = "Ctrl+Shift+D";
     /// <summary>Cycles scan context Auto → Space → Surface.</summary>
     public string CycleContext { get; set; } = "Ctrl+Shift+X";
+    /// <summary>Toggles overlay move mode (drag it anywhere, press again or double-click to lock).</summary>
+    public string MoveOverlay { get; set; } = "Ctrl+Shift+O";
 }
 
 public sealed class AppSettings
@@ -96,6 +100,13 @@ public sealed class AppSettings
     public int OcrIntervalMs { get; set; } = 200;
     public int VoteWindow { get; set; } = 5;
     public int VoteMinAgreement { get; set; } = 3;
+    /// <summary>Agreeing frames enough for a clean read that a single signal explains exactly (faster, robust to flicker).</summary>
+    public int VoteFastAgreement { get; set; } = 2;
+    /// <summary>
+    /// Save the ROI locally (diagnostics/missed/) when an RS indicator is visible but can't be read,
+    /// or when a new stable RS is unknown. Used to improve recognition; nothing leaves the PC.
+    /// </summary>
+    public bool SaveMissedReads { get; set; } = true;
     public double HoldSeconds { get; set; } = 4;
     /// <summary>
     /// With scan context Auto, how long a context learned from a revealing signal (asteroid type → Space,

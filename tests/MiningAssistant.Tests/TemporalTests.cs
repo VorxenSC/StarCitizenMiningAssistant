@@ -41,6 +41,31 @@ public class TemporalTests
     }
 
     [Fact]
+    public void Two_clean_reads_of_a_known_ore_are_enough()
+    {
+        // OCR flickering between the right value and nothing must still show the ore.
+        var s = new ScanSession(TestData.Matcher(), 5, 3);
+        s.Observe(15420, At(0));
+        s.Observe(null, At(1));
+        var st = s.Observe(15420, At(2));
+        Assert.Equal(15420, st.StableRS);
+        Assert.Equal("Titanium", st.Match!.Best!.Material.Name);
+    }
+
+    [Fact]
+    public void Unexplained_or_corrected_values_still_need_full_agreement()
+    {
+        var s = new ScanSession(TestData.Matcher(), 5, 3);
+        s.Observe(5001, At(0));
+        Assert.Null(s.Observe(5001, At(1)).StableRS);       // unknown value: 2 votes are not enough
+        Assert.Equal(5001, s.Observe(5001, At(2)).StableRS); // 3 votes: shown as UNKNOWN
+
+        var t = new ScanSession(TestData.Matcher(), 5, 3);
+        t.Observe(3585, At(0), substitutions: 1);
+        Assert.Null(t.Observe(3585, At(1), substitutions: 1).StableRS); // OCR-corrected: needs 3
+    }
+
+    [Fact]
     public void Session_uses_cleanest_read_of_the_voted_value()
     {
         var s = new ScanSession(TestData.Matcher(), 5, 3);
