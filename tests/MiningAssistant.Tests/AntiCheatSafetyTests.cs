@@ -34,6 +34,8 @@ public class AntiCheatSafetyTests
         "GetWindowLongPtrW", "SetWindowLongPtrW", "SetWindowPos", "SetWindowDisplayAffinity", "GetWindowRect",
         // Hotkeys: passive keyboard Raw Input sink (receive-only; no hook, keys are not blocked or altered).
         "RegisterRawInputDevices", "GetRawInputData",
+        // Keyboard layout lookup so "[" / "]" / "\" hotkeys work on ABNT2 and US layouts.
+        "VkKeyScanW",
     };
 
     [Fact]

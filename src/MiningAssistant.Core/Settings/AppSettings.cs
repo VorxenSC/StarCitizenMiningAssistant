@@ -47,8 +47,11 @@ public enum OverlayPlacement
 
 public sealed class OverlaySettings
 {
-    /// <summary>Default: fixed spot on the left, between the HUD's "SELF STATUS" bar and the chat.</summary>
+    /// <summary>Default: fixed spot on the right, centered under the HUD's "TARGET STATUS" bar.</summary>
     public OverlayPlacement Placement { get; set; } = OverlayPlacement.Manual;
+
+    /// <summary>Manual placement: XPercent is the card's horizontal center (true) or its left edge (false).</summary>
+    public bool CenterHorizontally { get; set; } = true;
 
     /// <summary>
     /// NextToSignal: card top-left relative to the RS region's center, in pixels at 1440p
@@ -62,9 +65,10 @@ public sealed class OverlaySettings
     public bool ShowIdleIndicator { get; set; } = false;
 
     /// <summary>Manual placement: top-left position as a fraction of the monitor.</summary>
-    // Between the "SELF STATUS" bar and the chat, centered on that column (measured on 3440×1440).
-    public double XPercent { get; set; } = 0.18;
-    public double YPercent { get; set; } = 0.257;
+    // Centered under the "TARGET STATUS" bar (center x ≈ 80.4%), ~1 inch below it
+    // (bar bottom ≈ 353 px + ~110 px on a 34" 3440×1440 panel). Measured on the user's screenshot.
+    public double XPercent { get; set; } = 0.8035;
+    public double YPercent { get; set; } = 0.32;
     public double Opacity { get; set; } = 0.92;
     public double Scale { get; set; } = 1.0;
     public bool ShowConfidence { get; set; } = true;
@@ -76,18 +80,25 @@ public sealed class OverlaySettings
     public bool HideFromCapture { get; set; } = true;
 }
 
+/// <summary>
+/// Chords like "Ctrl+Shift+M", or a single symbol like "[" (resolved through the keyboard layout, so it
+/// works on ABNT2 and US). Keys are only observed, never blocked: avoid keys the game uses.
+/// </summary>
 public sealed class HotkeySettings
 {
-    public string ToggleOverlay { get; set; } = "Ctrl+Shift+M";
+    // In-game keys: unused by Star Citizen.
+    public string ToggleOverlay { get; set; } = "[";
+    public string SaveUnknown { get; set; } = "]";
+    /// <summary>Toggles overlay move mode (drag it anywhere, press again or double-click to lock).</summary>
+    public string MoveOverlay { get; set; } = "\\";
+
+    // Desktop / secondary actions.
     public string QuickScan { get; set; } = "Ctrl+Shift+S";
     public string Calibration { get; set; } = "Ctrl+Shift+C";
     public string PauseOcr { get; set; } = "Ctrl+Shift+P";
-    public string SaveUnknown { get; set; } = "Ctrl+Shift+U";
     public string DebugWindow { get; set; } = "Ctrl+Shift+D";
     /// <summary>Cycles scan context Auto → Space → Surface.</summary>
     public string CycleContext { get; set; } = "Ctrl+Shift+X";
-    /// <summary>Toggles overlay move mode (drag it anywhere, press again or double-click to lock).</summary>
-    public string MoveOverlay { get; set; } = "Ctrl+Shift+O";
 }
 
 public sealed class AppSettings
