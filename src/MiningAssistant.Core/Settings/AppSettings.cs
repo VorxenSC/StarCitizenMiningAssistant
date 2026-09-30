@@ -47,7 +47,8 @@ public enum OverlayPlacement
 
 public sealed class OverlaySettings
 {
-    public OverlayPlacement Placement { get; set; } = OverlayPlacement.NextToSignal;
+    /// <summary>Default: fixed spot on the left, between the HUD's "SELF STATUS" bar and the chat.</summary>
+    public OverlayPlacement Placement { get; set; } = OverlayPlacement.Manual;
 
     /// <summary>
     /// NextToSignal: card top-left relative to the RS region's center, in pixels at 1440p
@@ -61,8 +62,9 @@ public sealed class OverlaySettings
     public bool ShowIdleIndicator { get; set; } = false;
 
     /// <summary>Manual placement: top-left position as a fraction of the monitor.</summary>
-    public double XPercent { get; set; } = 0.78;
-    public double YPercent { get; set; } = 0.12;
+    // Between the "SELF STATUS" bar and the chat, centered on that column (measured on 3440×1440).
+    public double XPercent { get; set; } = 0.18;
+    public double YPercent { get; set; } = 0.257;
     public double Opacity { get; set; } = 0.92;
     public double Scale { get; set; } = 1.0;
     public bool ShowConfidence { get; set; } = true;
