@@ -21,7 +21,9 @@ public sealed record FrameAnalysis(
     /// <summary>True when OCR was skipped because the ROI pixels did not change.</summary>
     bool Reused = false,
     /// <summary>True when OCR was skipped because the ROI holds no HUD text at all (no RS indicator).</summary>
-    bool NoText = false)
+    bool NoText = false,
+    /// <summary>The RS plate found by the locator (coordinates inside the analyzed image), when auto-locate is on.</summary>
+    Plate? Plate = null)
 {
     public string RawText => string.Join("\n", Attempts.Select(a => $"[{a.Variant}] {a.Text.Replace("\n", " ⏎ ")}"));
 }
@@ -70,13 +72,54 @@ public sealed class ScanPipeline
         return AnalyzeAsync(roi, _settings.Upscale, keepDebugImage, ct);
     }
 
+    private static readonly SignatureReading Empty = new(null, Array.Empty<NumberToken>());
+
+    // Tried in order until one gives a clean, simply-explained value (usually the first, in a few ms).
+    // The extra zoom levels only run on hard frames: small HUDs (1080p and below) are sensitive to how
+    // the few pixels of each digit land on the OCR's grid.
+    private static readonly (Variant variant, double zoom)[] PlatePlan =
+    {
+        (Variant.PlateGreen, 1.0), (Variant.PlateGreenSoft, 1.0), (Variant.PlateGreen, 1.4),
+        (Variant.PlateWhite, 1.0), (Variant.PlateGreen, 0.7), (Variant.PlateGreenSoft, 1.4), (Variant.PlateBright, 1.0),
+    };
+
     /// <summary>
-    /// Offline analysis of a saved screenshot. Uses the profile's RS region when calibrated,
-    /// otherwise OCRs the whole image and prefers numbers labelled "RS".
+    /// Auto-locate path: finds the amber RS plate anywhere in <paramref name="search"/> and reads only
+    /// the digits inside it. Independent of where the HUD is, of the resolution and of the background.
+    /// Returns NoText (with no plate) when no RS indicator is on screen.
+    /// </summary>
+    /// <param name="screenHeight">Height of the screen the image was captured from, or 0 if unknown.</param>
+    public async Task<FrameAnalysis> AnalyzeSearchAsync(Bitmap search, int screenHeight, bool keepDebugImage, CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        var plates = PlateLocator.Find(search, new PlateLocatorOptions { ScreenHeight = screenHeight });
+        if (plates.Count == 0)
+            return new FrameAnalysis(Array.Empty<OcrAttempt>(), Empty, null, sw.Elapsed, null, NoText: true);
+
+        var plate = plates[0];
+        return await RunAttemptsAsync(
+            PlatePlan.Select(p => (p.variant, (Func<Bitmap>)(() => ImageOps.PrepareDigits(search, plate, p.variant, p.zoom)))),
+            plate, keepDebugImage, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Offline analysis of a saved screenshot. With auto-locate it searches the profile's RS region (or
+    /// the whole image) for the RS plate; otherwise, or when no plate is found, it falls back to
+    /// reading the region as text.
     /// </summary>
     public async Task<FrameAnalysis> AnalyzeScreenshotAsync(Bitmap screenshot, RoiProfile? profile, bool keepDebugImage, CancellationToken ct = default)
     {
-        if (profile?.Get(RoiNames.RS) is { } region)
+        var region = profile?.Get(RoiNames.RS);
+        if (_settings.AutoLocate)
+        {
+            // Only trust the image height as "screen height" for full-frame screenshots.
+            var screenHeight = screenshot.Height >= 700 ? screenshot.Height : 0;
+            using var search = region is null ? null : ImageOps.Crop(screenshot, region.ToPixels(screenshot.Width, screenshot.Height));
+            var located = await AnalyzeSearchAsync(search ?? screenshot, screenHeight, keepDebugImage, ct).ConfigureAwait(false);
+            if (located.Plate is not null) return located;
+        }
+
+        if (region is not null)
         {
             using var roi = ImageOps.Crop(screenshot, region.ToPixels(screenshot.Width, screenshot.Height));
             return await AnalyzeRoiAsync(roi, keepDebugImage, ct).ConfigureAwait(false);
@@ -85,7 +128,10 @@ public sealed class ScanPipeline
         return await AnalyzeAsync(screenshot, screenshot.Width >= 1920 ? 1 : 2, keepDebugImage, ct).ConfigureAwait(false);
     }
 
-    private async Task<FrameAnalysis> AnalyzeAsync(Bitmap image, int scale, bool keepDebugImage, CancellationToken ct)
+    private Task<FrameAnalysis> AnalyzeAsync(Bitmap image, int scale, bool keepDebugImage, CancellationToken ct) =>
+        RunAttemptsAsync(Attempts(scale).Select(a => (a.variant, (Func<Bitmap>)(() => ImageOps.Prepare(image, a.scale, a.variant)))), null, keepDebugImage, ct);
+
+    private async Task<FrameAnalysis> RunAttemptsAsync(IEnumerable<(Variant variant, Func<Bitmap> prepare)> plan, Plate? plate, bool keepDebugImage, CancellationToken ct)
     {
         var attempts = new List<OcrAttempt>();
         var total = Stopwatch.StartNew();
@@ -97,10 +143,10 @@ public sealed class ScanPipeline
         // variants agree on the same value (e.g. a genuine unknown RS); otherwise keep the best reading
         // (known material > fewer substitutions > any number).
         var seen = new HashSet<int>();
-        foreach (var (variant, s) in Attempts(scale))
+        foreach (var (variant, prepare) in plan)
         {
             var sw = Stopwatch.StartNew();
-            using var prepared = ImageOps.Prepare(image, s, variant);
+            using var prepared = prepare();
             var output = await _ocr.RecognizeAsync(prepared, ct).ConfigureAwait(false);
             attempts.Add(new OcrAttempt(variant, output.Text, sw.Elapsed));
 
@@ -119,7 +165,7 @@ public sealed class ScanPipeline
             if (reading.RS is int v && !seen.Add(v)) break;
         }
 
-        return new FrameAnalysis(attempts, best!, bestMatch, total.Elapsed, png);
+        return new FrameAnalysis(attempts, best ?? Empty, bestMatch, total.Elapsed, png, Plate: plate);
     }
 
     private static bool IsSimple(MatchResult? m) => m is { IsMatch: true, Best.IsMixed: false };

@@ -1,11 +1,13 @@
 {
-  // Preset used until you calibrate: the ship-scanner RS code (amber pin icon + number) is drawn
-  // just above the round center reticle. Measured on 3440x1440 (number centered at ~x=1720, y=475).
-  // Regions are fractions of the monitor; the box is generous on purpose (text is auto-trimmed).
+  // Preset used until you calibrate. With auto-locate (default) the "rs" region is a SEARCH AREA:
+  // the app looks inside it for the amber RS plate (pin icon + number), wherever the HUD sways to,
+  // and reads only the digits inside the plate. Keep it generous: the central third of the screen.
+  // On 3440x1440 the plate rests around x=50%, y=33% and moves by +-150 px with ship motion.
+  // Regions are fractions of the monitor, so this works at any resolution / aspect ratio.
   "name": "default",
   "calibratedWidth": 3440,
   "calibratedHeight": 1440,
   "regions": {
-    "rs": { "xPercent": 0.453488, "yPercent": 0.305556, "widthPercent": 0.093023, "heightPercent": 0.048611 }
+    "rs": { "xPercent": 0.30, "yPercent": 0.12, "widthPercent": 0.40, "heightPercent": 0.46 }
   }
 }

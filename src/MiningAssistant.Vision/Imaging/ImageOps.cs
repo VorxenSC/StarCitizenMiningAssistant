@@ -26,6 +26,16 @@ public enum Variant
     Grayscale,
     /// <summary>Max-channel grayscale + Otsu threshold.</summary>
     Binarized,
+
+    // ── Variants for digits already isolated by PlateLocator (see ImageOps.PrepareDigits) ──
+    /// <summary>Green channel (the un-shifted one) with a raised black point: hides whatever shows through the plate.</summary>
+    PlateGreen,
+    /// <summary>Green channel, plain contrast stretch.</summary>
+    PlateGreenSoft,
+    /// <summary>min(R,G,B): white only.</summary>
+    PlateWhite,
+    /// <summary>max(R,G,B): any bright color (digits rendered amber).</summary>
+    PlateBright,
 }
 
 /// <summary>
@@ -73,6 +83,47 @@ public static class ImageOps
 
         // Windows OCR often misses text touching the image border: add a white margin.
         var pad = Math.Max(8, h / 3);
+        return FromGrayBytes(Pad(gray, w, h, pad, 255, out var pw, out var ph), pw, ph);
+    }
+
+    /// <summary>Icon height the digits are scaled to before OCR (digits end up ≈ 55 px tall).</summary>
+    public const double PlateTargetIconHeight = 100;
+
+    /// <summary>
+    /// Prepares the digits of a located RS plate for OCR. The crop holds only the digits (no icon, no
+    /// surroundings), and the scale comes from the icon height, so the OCR input looks the same at
+    /// 1080p, 1440p or 4K.
+    /// </summary>
+    public static Bitmap PrepareDigits(Bitmap search, Plate plate, Variant variant, double zoom = 1.0)
+    {
+        var channel = variant switch
+        {
+            Variant.PlateWhite => Channel.Min,
+            Variant.PlateBright => Channel.Max,
+            _ => Channel.Green,
+        };
+        var factor = Math.Clamp(PlateTargetIconHeight * zoom / plate.IconHeight, 2, 12);
+
+        using var crop = Crop(search, plate.Digits);
+        using var scaled = new Bitmap((int)Math.Round(crop.Width * factor), (int)Math.Round(crop.Height * factor), PixelFormat.Format32bppArgb);
+        using (var g = Graphics.FromImage(scaled))
+        {
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.DrawImage(crop, new Rectangle(0, 0, scaled.Width, scaled.Height));
+        }
+
+        var gray = ToGrayBytes(scaled, out var w, out var h, channel);
+        // Plate background (darkened scene) → black, digit cores → white. PlateGreen raises the black
+        // point so asteroids / scan dots seen through the semi-transparent plate disappear.
+        var lo = (int)Percentile(gray, 0.40);
+        var hi = Math.Max(lo + 1, (int)Percentile(gray, 0.99));
+        var black = variant == Variant.PlateGreen ? lo + (int)((hi - lo) * 0.35) : lo;
+        var lut = new byte[256];
+        for (var v = 0; v < 256; v++) lut[v] = (byte)(255 - Math.Clamp((v - black) * 255 / Math.Max(1, hi - black), 0, 255));
+        for (var i = 0; i < gray.Length; i++) gray[i] = lut[gray[i]];
+
+        var pad = Math.Max(12, h / 2);
         return FromGrayBytes(Pad(gray, w, h, pad, 255, out var pw, out var ph), pw, ph);
     }
 
@@ -154,7 +205,7 @@ public static class ImageOps
         finally { bmp.UnlockBits(data); }
     }
 
-    public enum Channel { Max, Blue, Warm, Min }
+    public enum Channel { Max, Blue, Warm, Min, Green }
 
     public static unsafe byte[] ToGrayBytes(Bitmap bmp, out int w, out int h, Channel channel = Channel.Max)
     {
@@ -178,6 +229,7 @@ public static class ImageOps
                         Channel.Blue => p[0],
                         Channel.Warm => Math.Min(p[1], p[2]),
                         Channel.Min => Math.Min(p[0], Math.Min(p[1], p[2])),
+                        Channel.Green => p[1],
                         _ => Math.Max(p[0], Math.Max(p[1], p[2])),
                     };
                 }

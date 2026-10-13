@@ -122,7 +122,9 @@ switch (cliArgs[0].ToLowerInvariant())
         for (var f = 0; f < frames; f++)
         {
             using var roi = capture.Capture(rect);
-            var r = await pipeline.AnalyzeRoiAsync(roi, dumpDir is not null);
+            var r = settings.Ocr.AutoLocate
+                ? await pipeline.AnalyzeSearchAsync(roi, monitor.Height, dumpDir is not null)
+                : await pipeline.AnalyzeRoiAsync(roi, dumpDir is not null);
             if (dumpDir is not null)
             {
                 Directory.CreateDirectory(dumpDir);
@@ -134,6 +136,39 @@ switch (cliArgs[0].ToLowerInvariant())
             Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff}  RS {r.Reading.RS?.ToString() ?? "-",6}  {label,-28} {r.OcrTime.TotalMilliseconds,4:F0} ms  raw: {r.RawText.Replace("\n", " | ")}");
             await Task.Delay(500);
         }
+        return 0;
+    }
+
+    case "locate":
+    {
+        // Runs only the plate locator and saves annotated images (green = icon, red = digits).
+        var outDir = dumpDir ?? Path.Combine(FindRepoRoot() ?? ".", ".scratch", "locate");
+        Directory.CreateDirectory(outDir);
+        int found = 0, total = 0;
+        foreach (var file in ExpandImages(cliArgs[1]))
+        {
+            total++;
+            using var bmp = new Bitmap(file);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var trace = new List<string>();
+            var plates = MiningAssistant.Vision.Imaging.PlateLocator.Find(bmp,
+                new MiningAssistant.Vision.Imaging.PlateLocatorOptions { Trace = verbose ? trace.Add : null });
+            sw.Stop();
+            foreach (var t in trace) Console.WriteLine("      " + t);
+            if (plates.Count > 0) found++;
+            Console.WriteLine($"{Path.GetFileName(file),-46} {bmp.Width}x{bmp.Height} {sw.ElapsedMilliseconds,3} ms  " +
+                (plates.Count == 0 ? "-" : string.Join(" | ", plates.Select(p => $"icon {p.Icon.Width}x{p.Icon.Height}@({p.Icon.X},{p.Icon.Y}) digits {p.Digits.Width}x{p.Digits.Height}"))));
+            if (plates.Count == 0) continue;
+            using var copy = new Bitmap(bmp);
+            using (var g = Graphics.FromImage(copy))
+                foreach (var p in plates)
+                {
+                    g.DrawRectangle(Pens.Lime, p.Icon.X - 1, p.Icon.Y - 1, p.Icon.Width + 1, p.Icon.Height + 1);
+                    g.DrawRectangle(Pens.Red, p.Digits.X - 1, p.Digits.Y - 1, p.Digits.Width + 1, p.Digits.Height + 1);
+                }
+            copy.Save(Path.Combine(outDir, Path.GetFileNameWithoutExtension(file) + ".loc.png"), ImageFormat.Png);
+        }
+        Console.WriteLine($"\nplates found in {found}/{total} images → {outDir}");
         return 0;
     }
 

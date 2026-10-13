@@ -489,3 +489,7 @@ publish/
 
 .scratch/
 
+
+# Self-contained distribution
+dist/
+

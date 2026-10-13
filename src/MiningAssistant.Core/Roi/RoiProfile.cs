@@ -12,7 +12,7 @@ public static class RoiNames
 
     public static readonly IReadOnlyList<(string Key, string Label)> All = new[]
     {
-        (RS, "RS Signature"),
+        (RS, "RS search area"),
         (ScanDetails, "Scan Details"),
         (Mass, "Mass"),
         (Resistance, "Resistance"),

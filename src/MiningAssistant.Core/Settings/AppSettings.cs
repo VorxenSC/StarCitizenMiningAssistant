@@ -32,6 +32,12 @@ public sealed class OcrSettings
     /// </summary>
     public int Upscale { get; set; } = 4;
     public PreprocessMode Preprocess { get; set; } = PreprocessMode.Auto;
+    /// <summary>
+    /// Find the amber RS plate (pin icon + digits) inside the RS region and read only its digits.
+    /// The RS region then acts as a generous *search area*, so HUD sway, other resolutions and busy
+    /// backgrounds no longer matter. Off = read the whole RS region as text (legacy fixed-area mode).
+    /// </summary>
+    public bool AutoLocate { get; set; } = true;
     /// <summary>Skip OCR when the ROI contains no HUD text at all (saves CPU while nothing is scanned).</summary>
     public bool SkipEmptyRoi { get; set; } = true;
     public NumberNormalizerOptions Normalizer { get; set; } = new();
@@ -130,6 +136,22 @@ public sealed class AppSettings
     public bool SkipUnchangedFrames { get; set; } = true;
 
     public bool DebugMode { get; set; } = false;
+    /// <summary>Master switch for the global hotkeys.</summary>
+    public bool HotkeysEnabled { get; set; } = true;
+    /// <summary>
+    /// Start scanning as soon as the app opens. Off (default): wait for the Start button, which runs a
+    /// countdown so the user can switch to the game window first.
+    /// </summary>
+    public bool AutoStart { get; set; } = false;
+    /// <summary>Countdown, in seconds, between clicking Start and the scanner actually starting (0 = none).</summary>
+    public int StartDelaySeconds { get; set; } = 5;
+    /// <summary>
+    /// Minimize the control panel when scanning starts. The panel opens in the middle of the screen,
+    /// exactly where the RS indicator appears, so leaving it there would hide the indicator.
+    /// </summary>
+    public bool MinimizePanelOnStart { get; set; } = true;
+    /// <summary>Open the control panel when the app starts (otherwise it starts in the tray).</summary>
+    public bool ShowPanelOnStartup { get; set; } = true;
     public bool SoundAlerts { get; set; } = false;
 
     /// <summary>When TargetOnly is on, only these materials are announced ("TARGET FOUND").</summary>

@@ -172,7 +172,9 @@ public sealed class LiveScanner : IDisposable
         }
         else
         {
-            analysis = await pipeline.AnalyzeRoiAsync(roi, config.Settings.DebugMode, ct).ConfigureAwait(false);
+            analysis = config.Settings.Ocr.AutoLocate
+                ? await pipeline.AnalyzeSearchAsync(roi, monitor.Height, config.Settings.DebugMode, ct).ConfigureAwait(false)
+                : await pipeline.AnalyzeRoiAsync(roi, config.Settings.DebugMode, ct).ConfigureAwait(false);
             _lastHash = hash;
             _lastAnalysis = analysis;
             if (!analysis.NoText) _ocrTimes.Enqueue(now);
@@ -181,9 +183,17 @@ public sealed class LiveScanner : IDisposable
                 _lastRoi?.Dispose();
                 _lastRoi = roi;
             }
-            // Indicator visible but nothing readable: keep the evidence.
-            if (config.Settings.SaveMissedReads && !analysis.NoText && analysis.Reading.RS is null)
-                Recorder?.Record("missed", roi, analysis.RawText, now);
+            // Indicator visible but nothing readable: keep the evidence (just the plate when located).
+            if (config.Settings.SaveMissedReads && !analysis.NoText && analysis.Reading.RS is null && Recorder is not null)
+            {
+                if (analysis.Plate is { } plate)
+                {
+                    var b = plate.Bounds;
+                    using var crop = ImageOps.Crop(roi, new PixelRect(Math.Max(0, b.X - 16), Math.Max(0, b.Y - 16), b.Width + 32, b.Height + 32));
+                    Recorder.Record("missed", crop, analysis.RawText, now);
+                }
+                else Recorder.Record("missed", roi, analysis.RawText, now);
+            }
         }
 
         while (_ocrTimes.Count > 0 && now - _ocrTimes.Peek() > TimeSpan.FromSeconds(5)) _ocrTimes.Dequeue();
@@ -192,17 +202,31 @@ public sealed class LiveScanner : IDisposable
         if (config.Settings.SaveMissedReads && state is { IsNew: true, Match.Status: MatchStatus.Unknown } && Recorder is not null)
         {
             using var last = CloneLastRoi();
-            if (last is not null) Recorder.Record($"unknown_rs{state.StableRS}", last, analysis.RawText, now);
+            if (last is not null && analysis.Plate is { } p)
+            {
+                var b = p.Bounds;
+                using var crop = ImageOps.Crop(last, new PixelRect(Math.Max(0, b.X - 16), Math.Max(0, b.Y - 16), b.Width + 32, b.Height + 32));
+                Recorder.Record($"unknown_rs{state.StableRS}", crop, analysis.RawText, now);
+            }
+            else if (last is not null) Recorder.Record($"unknown_rs{state.StableRS}", last, analysis.RawText, now);
         }
         return new ScanFrame(now, analysis, state, session.VoteBuffer, rect, captureTime, total.Elapsed,
             _ocrTimes.Count / 5.0, null);
     }
 
+    private bool _disposed;
+
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         _cts?.Cancel();
         try { _loop?.Wait(1000); } catch { /* shutting down */ }
         _cts?.Dispose();
-        lock (_roiLock) _lastRoi?.Dispose();
+        lock (_roiLock)
+        {
+            _lastRoi?.Dispose();
+            _lastRoi = null;
+        }
     }
 }
