@@ -163,7 +163,7 @@ public partial class SettingsWindow : Window
         var mon = Monitors.Get(_host.Settings.MonitorIndex);
         PreviewMonitor.Text = $"MONITOR #{mon.Index} · {mon.Width}×{mon.Height}";
         PreviewInterval.Text = $"EVERY {_host.Settings.OcrIntervalMs} MS";
-        HealthList.ItemsSource = st.Health.Select(h => new { h.Ok, Title = h.Title + ":", h.Detail }).ToList();
+        HealthList.ItemsSource = st.Health.Select(h => new { h.Ok, h.Notice, Title = h.Title + ":", h.Detail }).ToList();
 
         _loading = true;
         OverlaySwitch.IsChecked = st.OverlayVisible;

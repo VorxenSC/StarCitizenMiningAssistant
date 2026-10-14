@@ -120,8 +120,9 @@
             <!-- ───────────── functions | checklist + sound alert ───────────── -->
             <ctl:TwoColumnPanel Margin="0,20,0,0">
                 <Border Style="{StaticResource Card}" Padding="14,22,14,14">
-                    <StackPanel>
-                        <ContentControl Style="{StaticResource SectionHeader}" Content="FUNCTIONS" Margin="12,0,0,10" />
+                    <DockPanel>
+                        <ContentControl DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Content="FUNCTIONS" Margin="12,0,0,10" />
+                        <UniformGrid Columns="1">
                         <CheckBox x:Name="OverlaySwitch" Style="{StaticResource Switch}" Content="Overlay (result card)" Click="OverlaySwitch_Click" />
                         <CheckBox x:Name="LocateSwitch" Style="{StaticResource Switch}" Content="Auto-locate the amber RS plate" Click="Feature_Click"
                                   ToolTip="Finds the pin icon + number anywhere in the search area. Off = read a fixed area as text." />
@@ -137,7 +138,8 @@
                         <CheckBox x:Name="AskUnknownSwitch" Style="{StaticResource Switch}" Content="Ask me to name unknown signatures (pop-up)" Click="Feature_Click" />
                         <CheckBox x:Name="ContributeSwitch" Style="{StaticResource Switch}" Content="Send named signatures to GitHub (opt-in)" Click="Contribute_Click"
                                   ToolTip="Sends only the values you typed and the RS plate image to the private project repository, through the GitHub CLI. Nothing is sent while this is off." />
-                    </StackPanel>
+                        </UniformGrid>
+                    </DockPanel>
                 </Border>
 
                 <DockPanel LastChildFill="True">
@@ -159,6 +161,16 @@
                                             </DockPanel>
                                         </Border>
                                         <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Notice}" Value="True">
+                                                <Setter TargetName="Box" Property="Background" Value="#1F1A10" />
+                                                <Setter TargetName="Box" Property="BorderBrush" Value="#4A3D1F" />
+                                                <Setter TargetName="Box" Property="Padding" Value="12,10" />
+                                                <Setter TargetName="Box" Property="Margin" Value="0,3" />
+                                                <Setter TargetName="Mark" Property="Tag" Value="{StaticResource IconInfo}" />
+                                                <Setter TargetName="Mark" Property="Foreground" Value="{StaticResource Accent}" />
+                                                <Setter TargetName="TitleRun" Property="Foreground" Value="#F6CF7E" />
+                                                <Setter TargetName="DetailRun" Property="Foreground" Value="#D9C9A6" />
+                                            </DataTrigger>
                                             <DataTrigger Binding="{Binding Ok}" Value="False">
                                                 <Setter TargetName="Box" Property="Background" Value="#2A1519" />
                                                 <Setter TargetName="Box" Property="BorderBrush" Value="#66303A" />
@@ -196,7 +208,7 @@
                             <CheckBox x:Name="AlertMultiplesBox" DockPanel.Dock="Top" Click="AlertRs_Commit" Margin="0,14,0,0">
                                 <TextBlock Text="Also for multiples — 3585 also beeps on 7,170, 10,755… (clusters of 2, 3… rocks)" TextWrapping="Wrap" LineHeight="21" />
                             </CheckBox>
-                            <TextBlock x:Name="AlertRsHint" Style="{StaticResource Hint}" VerticalAlignment="Bottom" Margin="0,14,0,0" />
+                            <TextBlock x:Name="AlertRsHint" Style="{StaticResource Hint}" VerticalAlignment="Top" Margin="0,12,0,0" />
                         </DockPanel>
                     </Border>
                 </DockPanel>
@@ -205,13 +217,9 @@
             <!-- ───────────── hotkeys | live ───────────── -->
             <ctl:TwoColumnPanel Margin="0,20,0,0">
                 <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <ContentControl DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Content="HOTKEYS" Margin="0,0,0,14" />
-                        <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Margin="0,16,0,0">
-                            <Run Text="Work with the game in focus. Keys are only observed, never blocked. Change them in" />
-                            <Run Text="config/settings.json" FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="#B7C5D3" /><Run Text=", then click Reload." />
-                        </TextBlock>
-                        <ItemsControl x:Name="HotkeyList" VerticalAlignment="Top">
+                    <StackPanel>
+                        <ContentControl Style="{StaticResource SectionHeader}" Content="HOTKEYS" Margin="0,0,0,14" />
+                        <ItemsControl x:Name="HotkeyList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,0,0,9">
@@ -227,7 +235,11 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </DockPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0">
+                            <Run Text="Work with the game in focus. Keys are only observed, never blocked. Change them in" />
+                            <Run Text="config/settings.json" FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="#B7C5D3" /><Run Text=", then click Reload." />
+                        </TextBlock>
+                    </StackPanel>
                 </Border>
 
                 <Border Style="{StaticResource Card}">
@@ -253,7 +265,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </Border>
-                        <Border MinHeight="210" CornerRadius="11" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Background="#070C12" ClipToBounds="True">
+                        <Border MinHeight="150" CornerRadius="11" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Background="#070C12" ClipToBounds="True">
                             <Grid>
                                 <Rectangle>
                                     <Rectangle.Fill>

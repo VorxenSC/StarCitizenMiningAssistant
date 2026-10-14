@@ -12,8 +12,11 @@ namespace MiningAssistant.App.Services;
 
 public enum PanelState { Running, Paused, Problem }
 
-/// <summary>One line of the control panel's health checklist.</summary>
-public sealed record HealthItem(bool Ok, string Title, string Detail);
+/// <summary>
+/// One line of the control panel's checklist. Ok = false is a real problem (red: the app cannot work
+/// like this). Notice = something worth knowing that does not stop the app (amber, no alarm).
+/// </summary>
+public sealed record HealthItem(bool Ok, string Title, string Detail, bool Notice = false);
 
 /// <summary>One line of "what the app sees": key, value and an optional dimmed note.</summary>
 public sealed record LiveRow(string Key, string Value, string Note = "");
@@ -301,10 +304,10 @@ public sealed partial class AppHost
                     var (x, y, bw, bh) = Interop.Win32.Bounds(w);
                     return x < area.X + area.Width && area.X < x + bw && y < area.Y + area.Height && area.Y < y + bh;
                 });
-            health.Add(new(!covering, "Search area is clear",
-                covering
-                    ? "this window is on top of the search area — while it is in front, the app sees this panel instead of the game (it minimizes itself when you click START)"
-                    : "no app window is covering it"));
+            // Only matters while scanning: when stopped, START minimizes the panel anyway.
+            health.Add(covering && !paused
+                ? new(true, "Search area", "this panel is over the middle of the screen — while it is open in front of the game, the app reads the panel instead of the RS code. Minimize it or drag it aside while you mine.", Notice: true)
+                : new(true, "Search area", covering ? "clear when you click START (this panel minimizes itself)" : "nothing is covering it"));
         }
         health.Add(ContributionHealth());
 

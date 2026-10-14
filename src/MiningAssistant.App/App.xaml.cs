@@ -130,7 +130,8 @@ public partial class App : Application
                 new HealthItem(true, "Signature database", "default: 26 ores + 10 other signals"),
                 new HealthItem(true, "Resolution", "1920×1080 (1080p or higher is supported)"),
                 new HealthItem(true, "Hotkeys", "listening · keys received: 2"),
-                new HealthItem(false, "Search area is clear", "this window is on top of the search area — while it is in front, the app sees this panel instead of the game"),
+                new HealthItem(true, "Search area", "clear when you click START (this panel minimizes itself)"),
+                new HealthItem(true, "GitHub contributions", "on, but nothing can be sent yet — GitHub CLI is not signed in on this PC. Named signatures are kept here (0 waiting). To send them: sign in once with “gh auth login”, then Advanced settings → Send pending to GitHub. Or just turn the switch off.", Notice: true),
             },
             new[]
             {

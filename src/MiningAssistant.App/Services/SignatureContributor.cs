@@ -41,9 +41,9 @@ public sealed class SignatureContributor
     public static async Task<(bool ok, string detail)> CheckAsync()
     {
         var gh = FindGh();
-        if (gh is null) return (false, "GitHub CLI not installed (winget install GitHub.cli), then: gh auth login");
+        if (gh is null) return (false, "GitHub CLI is not installed on this PC");
         var (code, _, err) = await RunAsync(gh, new[] { "auth", "status", "--hostname", "github.com" }, TimeSpan.FromSeconds(15));
-        return code == 0 ? (true, "GitHub CLI logged in") : (false, "GitHub CLI not logged in — run: gh auth login" + (err.Length > 0 ? $" ({FirstLine(err)})" : ""));
+        return code == 0 ? (true, "GitHub CLI signed in") : (false, code == -1 ? "GitHub CLI did not answer (timed out)" : "GitHub CLI is not signed in on this PC");
     }
 
     /// <summary>Creates the contribution files in the repository. Returns the folder created, or an error.</summary>
@@ -75,6 +75,12 @@ public sealed class SignatureContributor
         return (true, "sent to " + c.Repository, folder);
     }
 
+    private static void SetIfMissing(ProcessStartInfo psi, string name, Environment.SpecialFolder folder)
+    {
+        if (string.IsNullOrEmpty(psi.Environment.TryGetValue(name, out var v) ? v : null))
+            psi.Environment[name] = Environment.GetFolderPath(folder);
+    }
+
     private static string FirstLine(string s) => s.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "";
 
     private static async Task<(int code, string stdout, string stderr)> RunAsync(string exe, IEnumerable<string> args, TimeSpan timeout, CancellationToken ct = default)
@@ -91,6 +97,11 @@ public sealed class SignatureContributor
         foreach (var a in args) psi.ArgumentList.Add(a); // no shell, no quoting tricks
         psi.Environment["GH_PROMPT_DISABLED"] = "1";      // never wait for interactive input
         psi.Environment["NO_COLOR"] = "1";
+        // gh finds its login in %APPDATA%\GitHub CLI; a restarted app can inherit a thin environment,
+        // and then gh wrongly answers "not logged in". Always pass the user's folders explicitly.
+        SetIfMissing(psi, "APPDATA", Environment.SpecialFolder.ApplicationData);
+        SetIfMissing(psi, "LOCALAPPDATA", Environment.SpecialFolder.LocalApplicationData);
+        SetIfMissing(psi, "USERPROFILE", Environment.SpecialFolder.UserProfile);
 
         using var p = Process.Start(psi) ?? throw new InvalidOperationException("could not start gh");
         var stdout = p.StandardOutput.ReadToEndAsync(ct);

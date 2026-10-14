@@ -33,8 +33,10 @@ public sealed partial class AppHost
 
     public async void RefreshGitHubStatus()
     {
+        if (!Settings.Contribute.Enabled) { _ghStatus = (false, "not checked"); return; }
         _ghStatus = (false, "checking…");
         _ghStatus = await Task.Run(SignatureContributor.CheckAsync);
+        if (!_ghStatus.ok) Log("GitHub check: " + _ghStatus.detail);
         UpdateStatus();
     }
 
@@ -140,9 +142,21 @@ public sealed partial class AppHost
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = Paths.LearnedSignaturesFile, UseShellExecute = true });
     }
 
-    private HealthItem ContributionHealth() => !Settings.Contribute.Enabled
-        ? new(true, "GitHub contributions", $"off · {LearnedCount} learned signature(s) on this PC")
-        : new(_ghStatus.ok, "GitHub contributions",
-            (_ghStatus.ok ? $"on → {Settings.Contribute.Repository}" : _ghStatus.detail) +
-            $" · learned {LearnedCount}, not sent {PendingContributions}");
+    /// <summary>
+    /// Sending is optional, so a missing GitHub sign-in is a note (amber), never an error: named signatures
+    /// stay on this PC and can be sent later with "Send pending to GitHub".
+    /// </summary>
+    private HealthItem ContributionHealth()
+    {
+        if (!Settings.Contribute.Enabled)
+            return new(true, "GitHub contributions", $"off · {LearnedCount} learned signature(s) on this PC");
+        if (_ghStatus.detail == "checking…")
+            return new(true, "GitHub contributions", "on · checking the GitHub sign-in…");
+        if (_ghStatus.ok)
+            return new(true, "GitHub contributions", $"on → {Settings.Contribute.Repository} · learned {LearnedCount}, waiting to send {PendingContributions}");
+        return new(true, "GitHub contributions",
+            $"on, but nothing can be sent yet — {_ghStatus.detail}. Named signatures are kept here ({PendingContributions} waiting). " +
+            "To send them: sign in once with “gh auth login”, then Advanced settings → Send pending to GitHub. Or just turn the switch off.",
+            Notice: true);
+    }
 }

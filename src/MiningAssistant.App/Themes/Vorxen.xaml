@@ -79,6 +79,7 @@
     <Geometry x:Key="IconCheck">M5,12.5 L9.5,17 L19,7.5</Geometry>
     <Geometry x:Key="IconCircleCheck">M3,12 A9,9 0 1 0 21,12 A9,9 0 1 0 3,12 M8,12.5 L10.7,15.2 L16,9.5</Geometry>
     <Geometry x:Key="IconCircleX">M3,12 A9,9 0 1 0 21,12 A9,9 0 1 0 3,12 M9,9 L15,15 M15,9 L9,15</Geometry>
+    <Geometry x:Key="IconInfo">M3,12 A9,9 0 1 0 21,12 A9,9 0 1 0 3,12 M12,11 V16.5 M12,7.6 V7.7</Geometry>
     <Geometry x:Key="IconPin">M12,22 C12,22 19,15.8 19,10 A7,7 0 0 0 5,10 C5,15.8 12,22 12,22 Z M9.6,10 A2.4,2.4 0 1 0 14.4,10 A2.4,2.4 0 1 0 9.6,10</Geometry>
     <Geometry x:Key="IconPlay">M5,3 L21,12 L5,21 Z</Geometry>
     <Geometry x:Key="IconStop">M5.5,3 H18.5 A2.5,2.5 0 0 1 21,5.5 V18.5 A2.5,2.5 0 0 1 18.5,21 H5.5 A2.5,2.5 0 0 1 3,18.5 V5.5 A2.5,2.5 0 0 1 5.5,3 Z</Geometry>
@@ -408,7 +409,7 @@
         <Setter Property="Foreground" Value="{StaticResource TextMain}" />
         <Setter Property="FontSize" Value="15" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
