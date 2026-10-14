@@ -165,6 +165,11 @@ public sealed class AppSettings
     public bool ShowPanelOnStartup { get; set; } = true;
     public bool SoundAlerts { get; set; } = false;
 
+    /// <summary>Beep (two-tone, distinct from the ore alert) when the stable RS is one of these numbers.</summary>
+    public List<int> AlertRsValues { get; set; } = new();
+    /// <summary>Also beep for multiples of <see cref="AlertRsValues"/> (3585 → 7170, 10755 …).</summary>
+    public bool AlertRsMultiples { get; set; } = false;
+
     /// <summary>When TargetOnly is on, only these materials are announced ("TARGET FOUND").</summary>
     public List<string> TargetMaterials { get; set; } = new();
     public bool TargetOnly { get; set; } = false;

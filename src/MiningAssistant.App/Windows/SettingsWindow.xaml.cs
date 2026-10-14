@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using MiningAssistant.App.Services;
+using MiningAssistant.Core.Matching;
 using MiningAssistant.Core.Materials;
 using MiningAssistant.Core.Settings;
 using MiningAssistant.Vision.Capture;
@@ -48,6 +49,9 @@ public partial class SettingsWindow : Window
         StartupSwitch.IsChecked = s.ShowPanelOnStartup;
         AutoStartSwitch.IsChecked = s.AutoStart;
         MinimizeSwitch.IsChecked = s.MinimizePanelOnStart;
+        AlertRsBox.Text = RsAlert.Format(s.AlertRsValues);
+        AlertMultiplesBox.IsChecked = s.AlertRsMultiples;
+        UpdateAlertHint(s);
         OverlaySwitch.IsChecked = _host.IsOverlayVisible;
 
         VersionBox.ItemsSource = MaterialDatabaseLoader.ListVersions(_host.Paths.DataRoot);
@@ -116,6 +120,37 @@ public partial class SettingsWindow : Window
     // ───────────────────────── switches (apply immediately) ─────────────────────────
 
     private void Start_Click(object sender, RoutedEventArgs e) => _host.StartStop();
+
+    // ───────────────────────── sound alert for specific signatures ─────────────────────────
+
+    private void AlertRs_Commit(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        var s = _host.Settings;
+        var values = RsAlert.Parse(AlertRsBox.Text);
+        var multiples = AlertMultiplesBox.IsChecked == true;
+        if (!values.SequenceEqual(s.AlertRsValues) || multiples != s.AlertRsMultiples)
+        {
+            s.AlertRsValues = values;
+            s.AlertRsMultiples = multiples;
+            _host.ApplySettings();
+        }
+        AlertRsBox.Text = RsAlert.Format(values); // normalized ("3,585" → "3585")
+        UpdateAlertHint(s);
+    }
+
+    private void AlertRsBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter) AlertRs_Commit(sender, e);
+    }
+
+    private void TestAlert_Click(object sender, RoutedEventArgs e) => AppHost.PlayRsAlertTone();
+
+    private void UpdateAlertHint(AppSettings s) =>
+        AlertRsHint.Text = s.AlertRsValues.Count == 0
+            ? "Off. Type a signature (e.g. 3585 for Gold, 3870 for Tungsten) and press Enter."
+            : "Active: " + _host.DescribeAlertValues(s.AlertRsValues) + (s.AlertRsMultiples ? "   · multiples too" : "") +
+              "   — beeps once each time one is detected (works even with Sound alerts off).";
 
     private void OverlaySwitch_Click(object sender, RoutedEventArgs e) => _host.SetOverlayVisible(OverlaySwitch.IsChecked == true);
 

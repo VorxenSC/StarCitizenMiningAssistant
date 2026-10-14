@@ -107,6 +107,24 @@
                 <CheckBox x:Name="MinimizeSwitch" Style="{StaticResource Switch}" Content="Minimize this panel when scanning starts" Click="Feature_Click" />
             </WrapPanel>
 
+            <!-- Sound alert for specific signatures -->
+            <TextBlock Text="🔔 SOUND ALERT FOR A SPECIFIC SIGNATURE" Style="{StaticResource Section}" />
+            <Border Background="#FF111827" CornerRadius="6" Padding="10,8" BorderBrush="#FF334155" BorderThickness="1">
+                <StackPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="🔔 Test sound" Margin="8,0,0,0" Click="TestAlert_Click" />
+                        <Button DockPanel.Dock="Right" Content="Save" Margin="8,0,0,0" Click="AlertRs_Commit" />
+                        <TextBlock Text="Beep when RS is" Foreground="#FF94A3B8" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBox x:Name="AlertRsBox" FontSize="14" Padding="6,3" VerticalContentAlignment="Center"
+                                 LostFocus="AlertRs_Commit" KeyDown="AlertRsBox_KeyDown"
+                                 ToolTip="One or more RS numbers, e.g. 3585, 7170 — press Enter to save. Leave empty to turn off." />
+                    </DockPanel>
+                    <CheckBox x:Name="AlertMultiplesBox" Content="Also for multiples — 3585 also beeps on 7,170, 10,755… (clusters of 2, 3… rocks)"
+                              Click="AlertRs_Commit" Margin="0,8,0,0" />
+                    <TextBlock x:Name="AlertRsHint" Foreground="#FF94A3B8" FontSize="11.5" TextWrapping="Wrap" Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
+
             <!-- Live view -->
             <TextBlock Text="LIVE — WHAT THE APP SEES" Style="{StaticResource Section}" />
             <Border Background="#FF020617" CornerRadius="6" BorderBrush="#FF334155" BorderThickness="1" Padding="8">

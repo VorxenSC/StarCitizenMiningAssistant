@@ -158,9 +158,42 @@ public sealed partial class AppHost : IDisposable
 
     private void OnNewDetection(SessionState state, OverlayView view)
     {
+        // User-chosen signature numbers: own two-tone beep, independent of the ore "Sound alerts" switch.
+        if (state.StableRS is int rs && Settings.AlertRsValues.Count > 0 &&
+            RsAlert.Match(rs, Settings.AlertRsValues, Settings.AlertRsMultiples, Settings.Matcher.MaxAbsoluteError,
+                          Settings.Matcher.MaxDepositCount) is int hit)
+        {
+            PlayRsAlertTone();
+            Flash(rs == hit ? $"🔔 RS {rs:N0}" : $"🔔 RS {rs:N0}  (×{Math.Round(rs / (double)hit)} of {hit:N0})", 4);
+            Log($"RS alert: {rs} matched {hit}");
+            return;
+        }
+
         if (!Settings.SoundAlerts || state.Match is not { } m) return;
         var notify = view.IsTarget || (m.IsMatch && m.Best!.Material.Notify && view.Kind == OverlayKind.Match);
         if (notify) SystemSounds.Asterisk.Play();
+    }
+
+    /// <summary>Rising two-tone beep (plays through the default audio device; does not block the UI).</summary>
+    public static void PlayRsAlertTone() => Task.Run(() =>
+    {
+        try
+        {
+            Console.Beep(880, 140);
+            Console.Beep(1320, 220);
+        }
+        catch { SystemSounds.Exclamation.Play(); }
+    });
+
+    /// <summary>What each alert number is, according to the database (for the control panel hint).</summary>
+    public string DescribeAlertValues(IEnumerable<int> values)
+    {
+        var matcher = new SignatureMatcher(_db, Settings.Matcher);
+        return string.Join("   ", values.Select(v =>
+        {
+            var m = matcher.Match(v);
+            return $"{v:N0} = " + (m.Best is { } b && m.IsMatch ? b.Label : m.Status == MatchStatus.Ambiguous ? "ambiguous" : "unknown signature");
+        }));
     }
 
     private void Flash(string text, double seconds = 3)
