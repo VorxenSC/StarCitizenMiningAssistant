@@ -37,6 +37,18 @@ public partial class App : Application
             return;
         }
 
+        // "--render-preview <png> [plate.png]": dev check of the unknown-signature pop-up, drawn off-screen.
+        var preview = Array.IndexOf(e.Args, "--render-preview");
+        if (preview >= 0 && preview + 1 < e.Args.Length)
+        {
+            var plate = preview + 2 < e.Args.Length && File.Exists(e.Args[preview + 2]) ? File.ReadAllBytes(e.Args[preview + 2]) : null;
+            var w = new Windows.UnknownSignatureWindow(new[] { "Gold", "Quantainium", "Tungsten", "Aluminum" });
+            w.SetSendOption(true, "Only these values and the plate image go to VorxenSC/StarCitizenMiningAssistant (private). Never the full screen.");
+            w.RenderPreview(new Windows.UnknownItem(51000, DateTime.Now, plate), e.Args[preview + 1]);
+            Shutdown(0);
+            return;
+        }
+
         // "--restart": started by a running instance that is closing; wait for it to let go.
         var restarting = e.Args.Contains("--restart");
         _single = new Mutex(false, MutexName);

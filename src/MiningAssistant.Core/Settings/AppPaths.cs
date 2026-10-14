@@ -19,6 +19,9 @@ public sealed class AppPaths
     /// <summary>Debug snapshots taken with the "]" key, one folder per snapshot.</summary>
     public string DebugSnapshotsRoot => Path.Combine(Root, "debug_snapshots");
     public string MissedReadsRoot => Path.Combine(Root, "diagnostics", "missed");
+    /// <summary>Signatures the user named in the unknown-signature pop-up.</summary>
+    public string LearnedSignaturesFile => Path.Combine(ConfigRoot, "learned_signatures.json");
+    public string LearnedImagesRoot => Path.Combine(ConfigRoot, "learned");
 
     public AppPaths(string? root = null) => Root = root ?? AppContext.BaseDirectory;
 

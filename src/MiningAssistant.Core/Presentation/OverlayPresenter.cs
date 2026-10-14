@@ -72,7 +72,7 @@ public static class OverlayPresenter
         switch (match.Status)
         {
             case MatchStatus.Unknown:
-                return new OverlayView(OverlayKind.Unknown, "UNKNOWN", rsLine, "", "Save with Ctrl+Shift+U", null, null,
+                return new OverlayView(OverlayKind.Unknown, "UNKNOWN", rsLine, "", "Name it in the pop-up window", null, null,
                     Array.Empty<string>(), false, state.IsHeld);
 
             case MatchStatus.Ambiguous:

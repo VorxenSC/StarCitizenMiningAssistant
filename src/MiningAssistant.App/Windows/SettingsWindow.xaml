@@ -114,6 +114,9 @@
                 <CheckBox x:Name="StartupSwitch" Style="{StaticResource Switch}" Content="Open this panel when the app starts" Click="Feature_Click" />
                 <CheckBox x:Name="AutoStartSwitch" Style="{StaticResource Switch}" Content="Start scanning automatically (no countdown)" Click="Feature_Click" />
                 <CheckBox x:Name="MinimizeSwitch" Style="{StaticResource Switch}" Content="Minimize this panel when scanning starts" Click="Feature_Click" />
+                <CheckBox x:Name="AskUnknownSwitch" Style="{StaticResource Switch}" Content="Ask me to name unknown signatures (pop-up)" Click="Feature_Click" />
+                <CheckBox x:Name="ContributeSwitch" Style="{StaticResource Switch}" Content="Send named signatures to GitHub (opt-in)" Click="Contribute_Click"
+                          ToolTip="Sends only the values you typed and the RS plate image to the private project repository, through the GitHub CLI. Nothing is sent while this is off." />
             </StackPanel>
 
             <!-- Right: hotkey legend, always visible -->
@@ -271,6 +274,8 @@
                         <Button Content="Open config folder" Click="OpenConfig_Click" />
                         <Button Content="Open diagnostics folder" Click="OpenDiagnostics_Click" />
                         <Button Content="Open debug snapshots" Click="OpenSnapshots_Click" />
+                        <Button Content="Learned signatures" Click="OpenLearned_Click" />
+                        <Button Content="Send pending to GitHub" Click="SendPending_Click" />
                         <Button Content="Run self-test" Click="SelfTest_Click" ToolTip="Checks OCR, capture, database and monitors on this PC and opens a report" />
                     </WrapPanel>
                 </StackPanel>

@@ -161,6 +161,17 @@ Cada snapshot tem ~4 MB e fica só no seu PC. Mande a pasta (ou o `1_screen.png`
 
 **Leituras perdidas automáticas:** se a placa RS é encontrada mas não lida, ou surge um RS desconhecido, o app também salva sozinho o recorte da placa em `diagnostics/missed/` (no máximo 1 a cada 3 s, até 300 arquivos).
 
+### Assinaturas desconhecidas: ensinar o app
+
+Quando aparece um RS que nada no banco explica, abre uma **janelinha persistente** à direita da tela. Ela não some junto com o cartão do overlay e não rouba o foco do jogo; várias desconhecidas entram em fila nela. Você pode:
+
+- **✓ Save**: informar o que é (nome; quantas rochas ou depósitos; tipo: minério, asteroide, depósito FPS/ROC, salvage; notas). O app guarda em `config/learned_signatures.json`, com o recorte da placa em `config/learned/`, e **passa a reconhecer aquele RS na hora**, inclusive os múltiplos;
+- **Ignore**: fecha sem guardar (pergunta de novo em outra sessão);
+- **Never ask for this RS**: nunca mais pergunta por aquele número.
+
+Desligue a janela em *Functions → Ask me to name unknown signatures*.
+
+**Enviar para o repositório (opcional):** com *Functions → Send named signatures to GitHub* ligado (pede confirmação) e a caixa *Send…* marcada na janelinha, a assinatura vai para `contributions/` no repositório privado: só os valores digitados e o recorte da placa, **nunca a tela inteira**. O envio é feito pelo **GitHub CLI (`gh`)** logado neste PC. O app em si não abre conexão de rede, não usa scripts codificados e não guarda senha ou token; o login fica no Gerenciador de Credenciais do Windows, gerenciado pelo `gh`. Isso evita que o antivírus ou o firewall tratem o envio como suspeito. Se falhar (sem `gh`, sem internet), a assinatura fica salva como pendente: *Advanced settings → Send pending to GitHub*. Para preparar outro PC: `winget install GitHub.cli` e `gh auth login`.
 ### O que o overlay mostra
 
 | Situação | Overlay |
@@ -322,6 +333,7 @@ O Star Citizen usa Easy Anti-Cheat. O app foi desenhado para ficar **inteirament
 
 Isso é **verificado automaticamente**: `tests/MiningAssistant.Tests/AntiCheatSafetyTests.cs` falha o build se qualquer código usar APIs de processo/memória/injeção/entrada sintética/rede ou importar qualquer função nativa fora de uma lista de 9 funções de `user32.dll`.
 
+**Windows SmartScreen em outro PC:** o `.exe` não tem assinatura digital paga, então, ao abrir pela primeira vez um `.zip` baixado da internet, o Windows pode mostrar "o Windows protegeu o computador". Clique em *Mais informações → Executar assim mesmo*, ou, antes de abrir, clique com o botão direito no `.zip` → *Propriedades* → marque *Desbloquear*. Copiar a pasta por pendrive ou pela rede local não gera esse aviso. Uma solução definitiva seria um certificado de assinatura de código.
 **Honestidade sobre o risco:** a detecção técnica do EAC mira injeção, leitura de memória e manipulação de arquivos — nada disso existe aqui. Mas ninguém fora da CIG pode garantir 100% como a política será aplicada. O EULA proíbe software de terceiros *"designed to modify the Game experience and/or give you an advantage"* e programas de macro/automação. Este app não modifica o jogo nem automatiza nada; ele só interpreta um número que já está na sua tela (o mesmo que consultar uma tabela de RS). Se quiser certeza absoluta, pergunte ao suporte da CIG antes de usar.
 
 ## Limitações conhecidas

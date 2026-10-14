@@ -170,6 +170,12 @@ public sealed class AppSettings
     /// <summary>Also beep for multiples of <see cref="AlertRsValues"/> (3585 → 7170, 10755 …).</summary>
     public bool AlertRsMultiples { get; set; } = false;
 
+    /// <summary>Open the pop-up that asks what an unknown RS is (stays until answered or dismissed).</summary>
+    public bool AskForUnknownSignatures { get; set; } = true;
+    /// <summary>RS values the user chose "never ask again" for.</summary>
+    public List<int> IgnoredUnknownRs { get; set; } = new();
+    public ContributionSettings Contribute { get; set; } = new();
+
     /// <summary>When TargetOnly is on, only these materials are announced ("TARGET FOUND").</summary>
     public List<string> TargetMaterials { get; set; } = new();
     public bool TargetOnly { get; set; } = false;
@@ -178,4 +184,17 @@ public sealed class AppSettings
     public OcrSettings Ocr { get; set; } = new();
     public OverlaySettings Overlay { get; set; } = new();
     public HotkeySettings Hotkeys { get; set; } = new();
+}
+
+/// <summary>
+/// Sending named signatures to the project's GitHub repository (contributions/ folder) so the shipped
+/// database can be improved. Off unless the user turns it on; nothing is sent otherwise.
+/// Uses the GitHub CLI ("gh") logged in on this PC — the app itself opens no network connection.
+/// </summary>
+public sealed class ContributionSettings
+{
+    public bool Enabled { get; set; } = false;
+    public string Repository { get; set; } = "VorxenSC/StarCitizenMiningAssistant";
+    public string Branch { get; set; } = "main";
+    public string Folder { get; set; } = "contributions";
 }

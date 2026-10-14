@@ -50,6 +50,7 @@ public sealed partial class AppHost : IDisposable
         Settings = Paths.LoadSettings();
         _profile = Paths.LoadProfile(Settings.ActiveProfile);
         _overlayVisible = Settings.Overlay.Visible;
+        InitLearning();
         LoadDatabase();
         _ocr = WindowsOcrEngine.TryCreate(Settings.Ocr.Language, out _ocrInfo);
         Log($"Start. {_ocrInfo}. DB {_db.SourcePath} ({_db.Materials.Count} materials).");
@@ -103,6 +104,7 @@ public sealed partial class AppHost : IDisposable
         try
         {
             _db = MaterialDatabaseLoader.LoadForVersion(Paths.DataRoot, Settings.GameVersion);
+            _learned.MergeInto(_db); // signatures the user named in the pop-up
             var problems = _db.Validate();
             if (problems.Count > 0)
                 MessageBox.Show("materials.json problems:\n\n" + string.Join("\n", problems), "Mining Assistant by Vorxen", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -138,7 +140,11 @@ public sealed partial class AppHost : IDisposable
         if (_overlayVisible && !_overlay.MoveMode)
             _overlay.ShowView(view, StatusLine(frame));
 
-        if (frame.State.IsNew) OnNewDetection(frame.State, view);
+        if (frame.State.IsNew)
+        {
+            OnNewDetection(frame.State, view);
+            MaybeAskUnknown(frame);
+        }
 
         if (_debugWindow.IsVisible)
         {

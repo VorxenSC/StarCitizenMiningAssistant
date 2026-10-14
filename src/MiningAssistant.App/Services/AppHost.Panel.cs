@@ -138,6 +138,7 @@ public sealed partial class AppHost
 
             Settings = Paths.LoadSettings();
             _profile = Paths.LoadProfile(Settings.ActiveProfile);
+            _learned.Reload();
             LoadDatabase();
             _ocr = WindowsOcrEngine.TryCreate(Settings.Ocr.Language, out _ocrInfo);
 
@@ -237,8 +238,9 @@ public sealed partial class AppHost
         // Our own windows sit in the middle of the screen by default — exactly where the RS plate appears.
         if (region is not null)
         {
-            var area = mon.ToScreen(region.ToPixels(mon.Width, mon.Height));
-            var covering = new System.Windows.Window[] { _settingsWindow, _debugWindow }
+            var area = mon.ToScreen(Settings.Ocr.SearchArea(region).ToPixels(mon.Width, mon.Height));
+            var covering = new System.Windows.Window?[] { _settingsWindow, _debugWindow, _unknownWindow }
+                .OfType<System.Windows.Window>()
                 .Where(w => w.IsVisible && w.WindowState != System.Windows.WindowState.Minimized)
                 .Any(w =>
                 {
@@ -250,6 +252,7 @@ public sealed partial class AppHost
                     ? "this window is on top of the search area — while it is in front, the app sees this panel instead of the game (it minimizes itself when you click START)"
                     : "no app window is covering it"));
         }
+        health.Add(ContributionHealth());
 
         // What the scanner sees right now.
         var live = new System.Text.StringBuilder();
