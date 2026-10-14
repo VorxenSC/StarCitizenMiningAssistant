@@ -24,7 +24,7 @@ if ($LASTEXITCODE -ne 0) { throw 'self-contained publish failed' }
 # Zip without any local config / diagnostics, so the other PC starts clean.
 $zip = 'dist\MiningAssistant.zip'
 if (Test-Path $zip) { Remove-Item -LiteralPath $zip }
-$items = Get-ChildItem dist\MiningAssistant | Where-Object { $_.Name -notin 'config', 'diagnostics', 'unknown_signatures' }
+$items = Get-ChildItem dist\MiningAssistant | Where-Object { $_.Name -notin 'config', 'diagnostics', 'unknown_signatures', 'debug_snapshots' }
 Compress-Archive -Path $items.FullName -DestinationPath $zip
 
 "publish\MiningAssistant.exe         (needs .NET 8 Desktop Runtime)"
