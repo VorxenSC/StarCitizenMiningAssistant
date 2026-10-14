@@ -49,6 +49,26 @@ public partial class App : Application
             return;
         }
 
+        // "--render-activation <png>": dev check of the activation window, drawn off-screen.
+        var activation = Array.IndexOf(e.Args, "--render-activation");
+        if (activation >= 0 && activation + 1 < e.Args.Length)
+        {
+            var w = new Windows.ActivationWindow("Vorxen") { Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false };
+            w.Show();
+            w.UpdateLayout();
+            var content = (FrameworkElement)w.Content;
+            var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap((int)w.ActualWidth, (int)content.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            var bg = new System.Windows.Media.DrawingVisual();
+            using (var dc = bg.RenderOpen()) dc.DrawRectangle(w.Background, null, new Rect(0, 0, w.ActualWidth, content.ActualHeight));
+            rtb.Render(bg);
+            rtb.Render(content);
+            var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+            using (var fs = File.Create(e.Args[activation + 1])) enc.Save(fs);
+            Shutdown(0);
+            return;
+        }
+
         // "--restart": started by a running instance that is closing; wait for it to let go.
         var restarting = e.Args.Contains("--restart");
         _single = new Mutex(false, MutexName);
@@ -67,9 +87,18 @@ public partial class App : Application
             return;
         }
 
+        // License: ask for name + key on first use (or if the stored one is not valid).
+        var license = EnsureLicense();
+        if (license is null)
+        {
+            ReleaseSingleInstance();
+            Shutdown();
+            return;
+        }
+
         try
         {
-            _host = new AppHost();
+            _host = new AppHost { LicensedTo = license.Name };
             _host.RestartRequested += Restart;
             _host.Start();
             ListenForShowRequests();
@@ -81,6 +110,25 @@ public partial class App : Application
                 "Mining Assistant by Vorxen", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
+    }
+
+    /// <summary>The stored activation if valid; otherwise shows the activation window. Null = user exited.</summary>
+    private static Core.Licensing.License? EnsureLicense()
+    {
+        var paths = new Core.Settings.AppPaths();
+        Core.Licensing.License? stored = null;
+        try
+        {
+            if (File.Exists(paths.LicenseFile))
+                stored = Core.Json.Deserialize<Core.Licensing.License>(File.ReadAllText(paths.LicenseFile));
+        }
+        catch { /* unreadable → ask again */ }
+        if (stored is { IsValid: true }) return stored;
+
+        var window = new Windows.ActivationWindow(stored?.Name);
+        if (window.ShowDialog() != true || window.Result is null) return null;
+        Core.Json.Save(paths.LicenseFile, window.Result);
+        return window.Result;
     }
 
     /// <summary>A second launch of the exe signals this event; show the control panel.</summary>

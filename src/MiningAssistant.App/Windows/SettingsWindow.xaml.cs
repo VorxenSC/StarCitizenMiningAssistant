@@ -30,7 +30,24 @@ public partial class SettingsWindow : Window
         _host = host;
         InitializeComponent();
         VersionText.Text = "v" + (Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?");
-        Closing += (_, e) => { e.Cancel = true; Hide(); };
+        if (host.LicensedTo.Length > 0) WelcomeRun.Text = $"   ·   Welcome {host.LicensedTo}, Let's Rock and Roll!";
+        Closing += (_, e) => { e.Cancel = true; host.Paths.SaveSettings(host.Settings); Hide(); };
+
+        // Resizable: never taller than the screen's work area; the size the user picks is remembered.
+        MaxHeight = SystemParameters.WorkArea.Height;
+        if (host.Settings.PanelHeight > 0)
+        {
+            SizeToContent = SizeToContent.Manual;
+            Height = Math.Clamp(host.Settings.PanelHeight, MinHeight, MaxHeight);
+            Width = Math.Max(MinWidth, host.Settings.PanelWidth > 0 ? host.Settings.PanelWidth : Width);
+        }
+        SizeChanged += (_, _) =>
+        {
+            // WPF switches SizeToContent to Manual as soon as the user drags an edge.
+            if (!IsLoaded || SizeToContent != SizeToContent.Manual || WindowState != WindowState.Normal) return;
+            host.Settings.PanelHeight = ActualHeight;
+            host.Settings.PanelWidth = ActualWidth;
+        };
         Load(host.Settings);
     }
 
@@ -185,6 +202,7 @@ public partial class SettingsWindow : Window
     }
 
     private void OpenLearned_Click(object sender, RoutedEventArgs e) => _host.OpenLearnedFile();
+    private void ChangeLicense_Click(object sender, RoutedEventArgs e) => _host.ChangeLicense();
     private void SendPending_Click(object sender, RoutedEventArgs e) => _host.SendPendingContributions();
 
     private void UpdateAlertHint(AppSettings s) =>

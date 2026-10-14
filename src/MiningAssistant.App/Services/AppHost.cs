@@ -21,6 +21,9 @@ namespace MiningAssistant.App.Services;
 public sealed partial class AppHost : IDisposable
 {
     public AppPaths Paths { get; } = new();
+
+    /// <summary>Name the license key was made for (shown as "Welcome …" in the control panel).</summary>
+    public string LicensedTo { get; init; } = "";
     public AppSettings Settings { get; private set; } = new();
 
     private RoiProfile _profile = new();

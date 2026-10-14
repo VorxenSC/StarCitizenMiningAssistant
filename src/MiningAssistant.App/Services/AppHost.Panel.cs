@@ -185,6 +185,17 @@ public sealed partial class AppHost
 
     public void OpenConfigFolder() => OpenFolder(Paths.ConfigRoot);
 
+    /// <summary>Forgets this activation and restarts, so the activation window asks for a name and key again.</summary>
+    public void ChangeLicense()
+    {
+        var ok = System.Windows.MessageBox.Show($"Forget the activation for “{LicensedTo}” and enter another name and key?\n\nThe app will restart.",
+            "Mining Assistant by Vorxen", System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Question);
+        if (ok != System.Windows.MessageBoxResult.OK) return;
+        if (File.Exists(Paths.LicenseFile)) File.Delete(Paths.LicenseFile);
+        Log($"License for {LicensedTo} removed by the user.");
+        RestartApp();
+    }
+
     /// <summary>Runs the headless self-test and opens its report.</summary>
     public async void RunSelfTest()
     {

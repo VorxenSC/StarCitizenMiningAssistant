@@ -172,6 +172,15 @@ switch (cliArgs[0].ToLowerInvariant())
         return 0;
     }
 
+    case "keygen":
+    {
+        // Developer tool: license key for a user name (the app asks for name + key on first run).
+        if (cliArgs.Count < 2) { Console.WriteLine("usage: mining-cli keygen \"User Name\" [\"Other Name\" ...]"); return 1; }
+        foreach (var name in cliArgs.Skip(1))
+            Console.WriteLine($"{name,-30} {MiningAssistant.Core.Licensing.LicenseKey.Generate(name)}");
+        return 0;
+    }
+
     case "make-icon":
     {
         var ico = cliArgs.Count > 1 ? cliArgs[1] : Path.Combine(FindRepoRoot() ?? ".", "src", "MiningAssistant.App", "Assets", "app.ico");

@@ -22,6 +22,8 @@ public sealed class AppPaths
     /// <summary>Signatures the user named in the unknown-signature pop-up.</summary>
     public string LearnedSignaturesFile => Path.Combine(ConfigRoot, "learned_signatures.json");
     public string LearnedImagesRoot => Path.Combine(ConfigRoot, "learned");
+    /// <summary>Activation (name + key) for this installation.</summary>
+    public string LicenseFile => Path.Combine(ConfigRoot, "license.json");
 
     public AppPaths(string? root = null) => Root = root ?? AppContext.BaseDirectory;
 

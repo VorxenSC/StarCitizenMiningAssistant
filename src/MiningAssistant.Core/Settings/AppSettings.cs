@@ -163,6 +163,9 @@ public sealed class AppSettings
     public bool MinimizePanelOnStart { get; set; } = true;
     /// <summary>Open the control panel when the app starts (otherwise it starts in the tray).</summary>
     public bool ShowPanelOnStartup { get; set; } = true;
+    /// <summary>Control panel size chosen by the user (0 = fit the content, up to the screen height).</summary>
+    public double PanelHeight { get; set; }
+    public double PanelWidth { get; set; }
     public bool SoundAlerts { get; set; } = false;
 
     /// <summary>Beep (two-tone, distinct from the ore alert) when the stable RS is one of these numbers.</summary>
