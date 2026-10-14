@@ -90,6 +90,7 @@
                 <Button Content="Move overlay" Click="Move_Click" ToolTip="Drag the result card, then click again (or double-click the card) to lock" />
                 <Button Content="📸 Debug snapshot" Click="Snapshot_Click"
                         ToolTip="Saves this exact moment (whole screen, RS plate, every OCR input and a report) to debug_snapshots — same as the ] key" />
+                <Button Content="Requirements" Click="Requirements_Click" ToolTip="Conditions for the app to work (display mode, resolution, HUD colors…)" />
                 <Button Content="Debug window" Click="Debug_Click" />
             </WrapPanel>
 

@@ -172,6 +172,43 @@ switch (cliArgs[0].ToLowerInvariant())
         return 0;
     }
 
+    case "sweep":
+    {
+        // Robustness at another resolution: rescales every image (default 0.75 = 1440p → 1080p HUD size)
+        // with several interpolation methods and checks that the expected RS (from the file name) is read.
+        var scale = double.Parse(Opt("--scale") ?? "0.75", System.Globalization.CultureInfo.InvariantCulture);
+        var pipeline = CreatePipeline();
+        if (pipeline is null) return 2;
+        var modes = new[] { System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic, System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear, System.Drawing.Drawing2D.InterpolationMode.Bilinear };
+        int pass = 0, fail = 0;
+        foreach (var dir in cliArgs.Skip(1))
+        foreach (var file in ExpandImages(dir))
+        {
+            var m = Regex.Match(Path.GetFileName(file), @"rs[-_]?(\d{3,6})", RegexOptions.IgnoreCase);
+            if (!m.Success) continue;
+            var expected = int.Parse(m.Groups[1].Value);
+            var profile = whole ? null : ResolveProfile(file);
+            using var src = new Bitmap(file);
+            foreach (var mode in modes)
+            {
+                using var bmp = new Bitmap(Math.Max(1, (int)Math.Round(src.Width * scale)), Math.Max(1, (int)Math.Round(src.Height * scale)), PixelFormat.Format32bppArgb);
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.InterpolationMode = mode;
+                    g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                    g.DrawImage(src, 0, 0, bmp.Width, bmp.Height);
+                }
+                var r = await pipeline.AnalyzeScreenshotAsync(bmp, profile, false);
+                var ok = r.Reading.RS == expected;
+                if (ok) pass++; else fail++;
+                if (!ok || verbose)
+                    Console.WriteLine($"{(ok ? "PASS" : "FAIL")}  {Path.GetFileName(file),-58} {mode,-19} {bmp.Width}x{bmp.Height}  plate:{(r.Plate is null ? "none" : r.Plate.Icon.Height + "px")}  got {r.Reading.RS?.ToString() ?? "-"}  raw: {r.RawText.Replace("\n", " | ")}");
+            }
+        }
+        Console.WriteLine($"\nscale {scale}: {pass} passed, {fail} failed");
+        return fail == 0 ? 0 : 1;
+    }
+
     case "keygen":
     {
         // Developer tool: license key for a user name (the app asks for name + key on first run).

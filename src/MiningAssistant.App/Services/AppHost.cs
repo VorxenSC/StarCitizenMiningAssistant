@@ -24,6 +24,9 @@ public sealed partial class AppHost : IDisposable
 
     /// <summary>Name the license key was made for (shown as "Welcome …" in the control panel).</summary>
     public string LicensedTo { get; init; } = "";
+
+    /// <summary>Just activated with a key: show the "Before you start" conditions.</summary>
+    public bool JustActivated { get; init; }
     public AppSettings Settings { get; private set; } = new();
 
     private RoiProfile _profile = new();
@@ -100,6 +103,9 @@ public sealed partial class AppHost : IDisposable
         // "nothing happened", especially on a new PC.
         if (Settings.ShowPanelOnStartup || !_profile.HasRegion(RoiNames.RS) || _ocr is null) _settingsWindow.Show();
         UpdateStatus();
+
+        // Conditions for the app to work: right after activation, and once for existing users.
+        if (JustActivated || !Settings.RequirementsAcknowledged) ShowRequirements();
     }
 
     private void LoadDatabase()

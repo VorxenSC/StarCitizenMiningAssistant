@@ -196,6 +196,31 @@ public sealed partial class AppHost
         RestartApp();
     }
 
+    /// <summary>"Before you start": the conditions the app needs, with what was detected on this PC.</summary>
+    public void ShowRequirements()
+    {
+        var mon = Monitors.Get(Settings.MonitorIndex);
+        var build = Environment.OSVersion.Version.Build;
+        var detected = new List<Windows.DetectedCondition>
+        {
+            new(mon.Height >= 1080, mon.Height >= 1080
+                ? $"Game monitor #{mon.Index}: {mon.Width}×{mon.Height} — resolution OK"
+                : $"Game monitor #{mon.Index}: {mon.Width}×{mon.Height} — below 1080p, the RS digits may be too small to read"),
+            new(_ocr is not null, _ocr is not null ? $"Text recognition: {_ocrInfo}" : "Text recognition missing — " + _ocrInfo),
+            new(build >= 19041, build >= 19041 ? $"Windows build {build} — OK" : $"Windows build {build} — needs Windows 10 2004 (19041) or newer"),
+            new(_hotkeys.RawInputActive, _hotkeys.RawInputActive ? "Hotkey listener active" : "Hotkey listener could not start"),
+        };
+        var w = new Windows.RequirementsWindow(LicensedTo, detected);
+        w.SelfTestRequested += RunSelfTest;
+        w.Closed += (_, _) =>
+        {
+            Settings.RequirementsAcknowledged = true;
+            Paths.SaveSettings(Settings);
+        };
+        w.Show();
+        w.Activate();
+    }
+
     /// <summary>Runs the headless self-test and opens its report.</summary>
     public async void RunSelfTest()
     {

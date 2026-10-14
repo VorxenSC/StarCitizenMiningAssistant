@@ -176,20 +176,35 @@ public class RealScreenshotTests
     /// 1080p monitor (icon ≈ 17 px). Below ~1000 px of height digits get under 8 px and OCR becomes
     /// unreliable — that is the documented minimum, not something these tests claim to cover.
     /// </summary>
+    /// <summary>
+    /// Full HD guarantee: every real capture (space screenshots, live failure cases, Daymar bright ground)
+    /// rescaled to the 1080p HUD size (×0.75 of 1440p) and to a 1080p game in a window (×0.70), with three
+    /// interpolation methods, must read the right RS. Measured margin: still 24/24 at ×0.70.
+    /// </summary>
     [Theory]
-    [InlineData(2560)]
-    public async Task Works_at_1080p_hud_size_without_recalibration(int width)
+    [InlineData(0.75)]
+    [InlineData(0.70)]
+    public async Task Full_hd_reads_every_real_capture(double scale)
     {
         if (Pipeline() is not { } pipeline) return;
-        var dir = Dir("real");
-        var profile = Json.Deserialize<RoiProfile>(File.ReadAllText(Path.Combine(dir, "profile.roi.json")));
+        var realProfile = Json.Deserialize<RoiProfile>(File.ReadAllText(Path.Combine(Dir("real"), "profile.roi.json")));
+        var modes = new[] { InterpolationMode.HighQualityBicubic, InterpolationMode.HighQualityBilinear, InterpolationMode.Bilinear };
+        var files = Directory.GetFiles(Dir("real"), "*.jpg").Concat(Directory.GetFiles(Dir("live"), "*.png")).ToList();
 
-        foreach (var file in Directory.GetFiles(dir, "*.jpg"))
+        foreach (var file in files)
+        foreach (var mode in modes)
         {
             using var native = new Bitmap(file);
-            using var bmp = Scaled(native, width);
+            using var bmp = new Bitmap((int)Math.Round(native.Width * scale), (int)Math.Round(native.Height * scale));
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.InterpolationMode = mode;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.DrawImage(native, 0, 0, bmp.Width, bmp.Height);
+            }
+            var profile = file.EndsWith(".jpg") ? realProfile : null;
             var r = await pipeline.AnalyzeScreenshotAsync(bmp, profile, false);
-            Assert.True(r.Reading.RS == Expected(file), $"{Path.GetFileName(file)} @ {bmp.Width}×{bmp.Height}: got {r.Reading.RS} ({r.RawText})");
+            Assert.True(r.Reading.RS == Expected(file), $"{Path.GetFileName(file)} ×{scale} {mode}: got {r.Reading.RS} ({r.RawText})");
         }
     }
 

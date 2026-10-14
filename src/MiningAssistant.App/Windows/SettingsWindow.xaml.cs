@@ -293,6 +293,7 @@ public partial class SettingsWindow : Window
     private void Calibrate_Click(object sender, RoutedEventArgs e) => _host.StartCalibration();
     private void Move_Click(object sender, RoutedEventArgs e) => _host.ToggleMoveOverlay();
     private void Debug_Click(object sender, RoutedEventArgs e) => _host.ShowDebug();
+    private void Requirements_Click(object sender, RoutedEventArgs e) => _host.ShowRequirements();
     private void Snapshot_Click(object sender, RoutedEventArgs e) => _host.TakeDebugSnapshot();
     private void OpenSnapshots_Click(object sender, RoutedEventArgs e) => _host.OpenSnapshotsFolder();
     private void Analyze_Click(object sender, RoutedEventArgs e) => _host.AnalyzeScreenshot();

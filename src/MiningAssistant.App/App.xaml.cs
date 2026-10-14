@@ -49,11 +49,16 @@ public partial class App : Application
             return;
         }
 
-        // "--render-activation <png>": dev check of the activation window, drawn off-screen.
+        // "--render-activation <png>" / "--render-requirements <png>": dev checks of those windows, drawn off-screen.
         var activation = Array.IndexOf(e.Args, "--render-activation");
+        var requirements = Array.IndexOf(e.Args, "--render-requirements");
+        if (requirements >= 0 && requirements + 1 < e.Args.Length) activation = requirements;
         if (activation >= 0 && activation + 1 < e.Args.Length)
         {
-            var w = new Windows.ActivationWindow("Vorxen") { Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false };
+            Window w = requirements >= 0
+                ? new Windows.RequirementsWindow("Vorxen", new[] { new Windows.DetectedCondition(true, "Game monitor #0: 1920×1080 — resolution OK"), new Windows.DetectedCondition(false, "Text recognition missing — example warning") })
+                : new Windows.ActivationWindow("Vorxen");
+            w.Left = -20000; w.Top = -20000; w.WindowStartupLocation = WindowStartupLocation.Manual; w.ShowActivated = false;
             w.Show();
             w.UpdateLayout();
             var content = (FrameworkElement)w.Content;
@@ -88,7 +93,7 @@ public partial class App : Application
         }
 
         // License: ask for name + key on first use (or if the stored one is not valid).
-        var license = EnsureLicense();
+        var (license, justActivated) = EnsureLicense();
         if (license is null)
         {
             ReleaseSingleInstance();
@@ -98,7 +103,7 @@ public partial class App : Application
 
         try
         {
-            _host = new AppHost { LicensedTo = license.Name };
+            _host = new AppHost { LicensedTo = license.Name, JustActivated = justActivated };
             _host.RestartRequested += Restart;
             _host.Start();
             ListenForShowRequests();
@@ -112,8 +117,8 @@ public partial class App : Application
         }
     }
 
-    /// <summary>The stored activation if valid; otherwise shows the activation window. Null = user exited.</summary>
-    private static Core.Licensing.License? EnsureLicense()
+    /// <summary>The stored activation if valid; otherwise shows the activation window. Null license = user exited.</summary>
+    private static (Core.Licensing.License? license, bool justActivated) EnsureLicense()
     {
         var paths = new Core.Settings.AppPaths();
         Core.Licensing.License? stored = null;
@@ -123,12 +128,12 @@ public partial class App : Application
                 stored = Core.Json.Deserialize<Core.Licensing.License>(File.ReadAllText(paths.LicenseFile));
         }
         catch { /* unreadable → ask again */ }
-        if (stored is { IsValid: true }) return stored;
+        if (stored is { IsValid: true }) return (stored, false);
 
         var window = new Windows.ActivationWindow(stored?.Name);
-        if (window.ShowDialog() != true || window.Result is null) return null;
+        if (window.ShowDialog() != true || window.Result is null) return (null, false);
         Core.Json.Save(paths.LicenseFile, window.Result);
-        return window.Result;
+        return (window.Result, true);
     }
 
     /// <summary>A second launch of the exe signals this event; show the control panel.</summary>
