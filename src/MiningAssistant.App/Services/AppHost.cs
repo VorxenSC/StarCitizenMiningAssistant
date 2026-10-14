@@ -370,7 +370,7 @@ public sealed partial class AppHost : IDisposable
     private int _snapshotsBusy;
 
     /// <summary>
-    /// "]" hotkey / panel button: saves a full debug snapshot of this exact moment (whole game monitor,
+    /// Snapshot hotkey (Page Down) / panel button: saves a full debug snapshot of this exact moment (whole game monitor,
     /// search area, plate, every OCR input and a report) into debug_snapshots/ for later analysis.
     /// The screen is grabbed immediately; the analysis runs in the background.
     /// </summary>

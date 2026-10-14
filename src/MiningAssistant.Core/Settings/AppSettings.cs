@@ -97,15 +97,16 @@ public sealed class OverlaySettings
 }
 
 /// <summary>
-/// Chords like "Ctrl+Shift+M", or a single symbol like "[" (resolved through the keyboard layout, so it
-/// works on ABNT2 and US). Keys are only observed, never blocked: avoid keys the game uses.
+/// Chords like "Ctrl+Shift+M", key names like "PageUp", or a single symbol like "\" (resolved through the
+/// keyboard layout, so it works on ABNT2 and US). Keys are only observed, never blocked: avoid keys the game uses.
 /// </summary>
 public sealed class HotkeySettings
 {
-    // In-game keys: unused by Star Citizen.
-    public string ToggleOverlay { get; set; } = "[";
+    // In-game keys. "[" and "]" were the defaults until v0.1.4, but Star Citizen uses them to accept /
+    // decline missions, so they moved to Page Up / Page Down (see AppSettings.Migrate).
+    public string ToggleOverlay { get; set; } = "PageUp";
     /// <summary>Saves a full debug snapshot of this moment (screen, plate, OCR inputs, report) into debug_snapshots/.</summary>
-    public string DebugSnapshot { get; set; } = "]";
+    public string DebugSnapshot { get; set; } = "PageDown";
     /// <summary>Toggles overlay move mode (drag it anywhere, press again or double-click to lock).</summary>
     public string MoveOverlay { get; set; } = "\\";
 
@@ -120,6 +121,25 @@ public sealed class HotkeySettings
 
 public sealed class AppSettings
 {
+    /// <summary>Settings format; older files are upgraded once by <see cref="Migrate"/>.</summary>
+    public int ConfigVersion { get; set; }
+    public const int CurrentConfigVersion = 1;
+
+    /// <summary>
+    /// Upgrades settings saved by an older version. Returns true when something changed (save the file).
+    /// v1: the overlay / snapshot hotkeys "[" and "]" collide with accepting / declining missions in
+    /// Star Citizen; if they are still the old defaults they become Page Up / Page Down. Keys the user
+    /// chose are left alone.
+    /// </summary>
+    public bool Migrate()
+    {
+        if (ConfigVersion >= CurrentConfigVersion) return false;
+        if (Hotkeys.ToggleOverlay == "[") Hotkeys.ToggleOverlay = "PageUp";
+        if (Hotkeys.DebugSnapshot == "]") Hotkeys.DebugSnapshot = "PageDown";
+        ConfigVersion = CurrentConfigVersion;
+        return true;
+    }
+
     /// <summary>Folder under data/ holding materials.json ("default", "4.10.1", ...).</summary>
     public string GameVersion { get; set; } = "default";
     public string ActiveProfile { get; set; } = "default";

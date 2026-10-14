@@ -16,7 +16,7 @@ public sealed class AppPaths
     public string ConfigRoot => Path.Combine(Root, "config");
     public string SettingsFile => Path.Combine(ConfigRoot, "settings.json");
     public string ProfilesRoot => Path.Combine(ConfigRoot, "profiles");
-    /// <summary>Debug snapshots taken with the "]" key, one folder per snapshot.</summary>
+    /// <summary>Debug snapshots taken with the snapshot hotkey (Page Down), one folder per snapshot.</summary>
     public string DebugSnapshotsRoot => Path.Combine(Root, "debug_snapshots");
     public string MissedReadsRoot => Path.Combine(Root, "diagnostics", "missed");
     /// <summary>Signatures the user named in the unknown-signature pop-up.</summary>
@@ -29,7 +29,12 @@ public sealed class AppPaths
 
     public string ProfileFile(string name) => Path.Combine(ProfilesRoot, $"{name}.roi.json");
 
-    public AppSettings LoadSettings() => Json.LoadOrCreate<AppSettings>(SettingsFile);
+    public AppSettings LoadSettings()
+    {
+        var s = Json.LoadOrCreate<AppSettings>(SettingsFile);
+        if (s.Migrate()) SaveSettings(s);
+        return s;
+    }
     public void SaveSettings(AppSettings s) => Json.Save(SettingsFile, s);
 
     /// <summary>Built-in preset for the Star Citizen ship-scanner RS code (used until the user calibrates).</summary>

@@ -130,7 +130,7 @@ public partial class SettingsWindow : Window
             new { Key = h.Calibration, Action = "Calibrate the search area" },
             new { Key = h.DebugWindow, Action = "Debug window" },
             new { Key = h.CycleContext, Action = "Location: Auto / Space / Surface" },
-        }.Where(k => !string.IsNullOrWhiteSpace(k.Key)).ToList();
+        }.Where(k => !string.IsNullOrWhiteSpace(k.Key)).Select(k => new { Key = KeyLabel(k.Key), k.Action }).ToList();
         _loading = false;
     }
 
@@ -220,6 +220,9 @@ public partial class SettingsWindow : Window
         IsVisibleChanged += (_, _) => Update();
         StateChanged += (_, _) => Update();
     }
+
+    /// <summary>"PageUp" → "Page Up", "Ctrl+Shift+S" unchanged: how the key is printed on the keyboard.</summary>
+    internal static string KeyLabel(string chord) => System.Text.RegularExpressions.Regex.Replace(chord, "(?<=[a-z])(?=[A-Z])", " ");
 
     // ───────────────────────── switches (apply immediately) ─────────────────────────
 

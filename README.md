@@ -147,8 +147,8 @@ As regiões ficam salvas como porcentagem do monitor (`config/profiles/default.r
 
 | Atalho | Ação |
 |---|---|
-| **[** | mostrar/esconder overlay |
-| **]** | **snapshot de depuração** deste instante (pasta `debug_snapshots\`) |
+| **Page Up** | mostrar/esconder overlay |
+| **Page Down** | **snapshot de depuração** deste instante (pasta `debug_snapshots\`) |
 | **\\** | mover o overlay: arraste o cartão e aperte de novo (ou duplo clique) para travar |
 | **Ctrl+Shift+S** | escanear agora |
 | **Ctrl+Shift+P** | ligar/desligar a leitura (sem contagem) |
@@ -156,11 +156,11 @@ As regiões ficam salvas como porcentagem do monitor (`config/profiles/default.r
 | **Ctrl+Shift+D** | janela de debug |
 | **Ctrl+Shift+X** | contexto Auto → Space → Surface |
 
-Os atalhos são só "ouvidos" (Raw Input passivo), nunca bloqueados, então o jogo também recebe as teclas. `[`, `]` e `\` são reconhecidos pelo caractere (funcionam em teclado ABNT2 e US). Se o contador "keys received" do painel não subir com o jogo em foco, o jogo está rodando como administrador: tire o modo administrador do RSI Launcher. Edite os atalhos em `config/settings.json` → `hotkeys` e clique **Reload**.
+Os atalhos são só "ouvidos" (Raw Input passivo), nunca bloqueados, então o jogo também recebe as teclas. `\` é reconhecido pelo caractere (funciona em teclado ABNT2 e US). Até a v0.1.4 os padrões eram `[` e `]`, que o Star Citizen usa para aceitar/recusar missões; configurações antigas com esses padrões passam sozinhas para Page Up / Page Down. Se o contador "keys received" do painel não subir com o jogo em foco, o jogo está rodando como administrador: tire o modo administrador do RSI Launcher. Edite os atalhos em `config/settings.json` → `hotkeys` e clique **Reload**.
 
 **Mover o overlay:** aperte `\` (ou *Move overlay* no painel/bandeja), libere o mouse do jogo (`Alt+Tab`), arraste o cartão e aperte `\` de novo. A posição fica salva.
 
-**Snapshot de depuração (`]`):** numa situação em que a leitura falha (ou dá errado), aperte **]** (ou *📸 Debug snapshot* no painel, na janela de debug ou na bandeja). Na hora, o app grava uma pasta `debug_snapshots\AAAAMMDD_HHMMSS_mmm\` com:
+**Snapshot de depuração (Page Down):** numa situação em que a leitura falha (ou dá errado), aperte **Page Down** (ou *📸 Debug snapshot* no painel, na janela de debug ou na bandeja). Na hora, o app grava uma pasta `debug_snapshots\AAAAMMDD_HHMMSS_mmm\` com:
 
 | Arquivo | Conteúdo |
 |---|---|
