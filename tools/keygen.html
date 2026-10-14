@@ -1,0 +1,291 @@
+<title>Mining Assistant Keygen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one centered work column — secret, then name + PC code → key, then this browser's history.
+   Single dark look on purpose: it matches the Mining Assistant app it issues keys for. */
+:root {
+  --bg: #0A1017;
+  --card: #111A24;
+  --card-line: #1E2B3A;
+  --field: #0A1118;
+  --line: #2A3A4C;
+  --line-hover: #3A4E66;
+  --fg: #E6EDF3;
+  --fg-bright: #F4F7FA;
+  --muted: #9DB0C2;
+  --dim: #8DA0B3;
+  --accent: #F2B33D;
+  --on-accent: #0A1017;
+  --ok: #3DDC97;
+  --ok-bg: #0F2A22;
+  --ok-line: #1F5A44;
+  --bad: #FF9AA0;
+  --bad-bg: #2A1519;
+  --bad-line: #66303A;
+  --font-display: 'Chakra Petch', 'Bahnschrift', 'Segoe UI', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(700px 320px at 92% -8%, rgba(242,179,61,.10), transparent 62%),
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+  background-size: auto, 32px 32px, 32px 32px;
+  color: var(--fg);
+  font: 400 15px/1.5 var(--font-body);
+  padding-inline: 16px;
+  padding-block: 32px 48px;
+  min-height: 100%;
+}
+.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+h1 { margin: 0; font: 700 26px/1.1 var(--font-display); letter-spacing: .07em; color: var(--fg-bright); text-wrap: balance; }
+.by { font: 600 15px var(--font-display); letter-spacing: .04em; color: var(--accent); }
+.lede { margin: 0; color: var(--muted); max-width: 60ch; }
+
+.card { background: var(--card); border: 1px solid var(--card-line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h2 { margin: 0; display: flex; align-items: center; gap: 10px; font: 600 13px var(--font-display); letter-spacing: .16em; text-transform: uppercase; color: #C9D5E0; }
+h2::before { content: ""; width: 8px; height: 8px; background: var(--accent); transform: rotate(45deg); flex: none; }
+
+label { display: block; font: 600 12px var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: #C9D5E0; margin-bottom: 7px; }
+.field { width: 100%; height: 46px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line); background: var(--field); color: var(--fg-bright); font: 500 16px var(--font-body); }
+.field.mono { font-family: var(--font-mono); letter-spacing: .05em; }
+.field:hover { border-color: var(--line-hover); }
+.field:focus-visible, button:focus-visible, input[type=checkbox]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.field[aria-invalid="true"] { border-color: var(--bad-line); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+.hint { margin: 6px 0 0; font-size: 13px; color: var(--dim); }
+.hint.bad { color: var(--bad); }
+
+.check { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #C9D5E0; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; font: 600 12px var(--font-mono); letter-spacing: .04em; border: 1px solid var(--line); color: var(--dim); background: var(--field); }
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.chip.ok { color: var(--ok); background: var(--ok-bg); border-color: var(--ok-line); }
+.chip.bad { color: var(--bad); background: var(--bad-bg); border-color: var(--bad-line); }
+
+.result { border-radius: 11px; border: 1px solid var(--card-line); background: var(--field); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.result-label { font: 600 12px var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.key { font: 600 clamp(22px, 6vw, 30px)/1.2 var(--font-mono); letter-spacing: .06em; color: var(--accent); overflow-wrap: anywhere; user-select: all; font-variant-numeric: tabular-nums; }
+.key.empty { color: #4C5D70; }
+.for { font: 500 13px var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+button { height: 42px; padding: 0 18px; border-radius: 9px; border: 1px solid var(--line); background: #172230; color: var(--fg); font: 500 14px var(--font-body); cursor: pointer; }
+button:hover:not(:disabled) { background: #1E2D40; border-color: var(--line-hover); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); border: 0; color: var(--on-accent); font: 700 14px var(--font-display); letter-spacing: .08em; }
+button.primary:hover:not(:disabled) { background: #F6C25E; }
+button.small { height: 34px; padding: 0 12px; font-size: 13px; }
+
+.history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.history li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--card-line); }
+.history li:first-child { border-top: 0; }
+.h-name { font-weight: 600; color: var(--fg-bright); overflow-wrap: anywhere; }
+.h-meta { grid-column: 1; font: 500 12.5px var(--font-mono); color: var(--dim); overflow-wrap: anywhere; }
+.h-key { grid-column: 1; font: 600 14px var(--font-mono); color: var(--accent); letter-spacing: .04em; }
+.history li button { grid-column: 2; grid-row: 1 / span 3; }
+.empty-state { margin: 0; color: var(--dim); font-size: 14px; }
+.foot { font-size: 13px; color: var(--dim); line-height: 1.6; }
+.foot code { font: 500 12px var(--font-mono); color: #B7C5D3; background: var(--field); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: no-preference) { button, .field { transition: background .12s, border-color .12s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><h1>MINING ASSISTANT</h1><span class="by">key generator</span></div>
+    <p class="lede">Makes the activation key for one player on one PC. The player sends you their name and the PC code shown in the app's activation window.</p>
+  </header>
+
+  <section class="card" aria-labelledby="secret-title">
+    <div class="card-head">
+      <h2 id="secret-title">Signing secret</h2>
+      <span class="chip" id="secret-chip">not entered</span>
+    </div>
+    <div>
+      <label for="secret">Secret (64 hex characters)</label>
+      <input id="secret" class="field mono" type="password" autocomplete="off" spellcheck="false" placeholder="paste the secret from your password manager">
+      <p class="hint" id="secret-hint">It never leaves this browser. Keys are computed on this page.</p>
+    </div>
+    <label class="check" for="remember"><input id="remember" type="checkbox"> Remember the secret on this browser</label>
+  </section>
+
+  <section class="card" aria-labelledby="key-title">
+    <h2 id="key-title">New key</h2>
+    <div class="row">
+      <div>
+        <label for="name">Player name</label>
+        <input id="name" class="field" type="text" autocomplete="off" spellcheck="false" value="FJP">
+        <p class="hint">Exactly as the player will type it. Case and extra spaces don't matter.</p>
+      </div>
+      <div>
+        <label for="pc">PC code</label>
+        <input id="pc" class="field mono" type="text" autocomplete="off" spellcheck="false" value="Q4MA-RYY0" placeholder="XXXX-XXXX">
+        <p class="hint" id="pc-hint">From the player's activation window.</p>
+      </div>
+    </div>
+    <div class="result" aria-live="polite">
+      <span class="result-label">Key</span>
+      <div class="key empty" id="key">enter the secret</div>
+      <div class="for" id="for">example: FJP on PC Q4MA-RYY0</div>
+      <div class="actions">
+        <button class="primary" id="copy-key" disabled>Copy key</button>
+        <button id="copy-msg" disabled>Copy message for the player</button>
+        <button id="save" disabled>Add to history</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="hist-title">
+    <div class="card-head">
+      <h2 id="hist-title">Issued on this browser</h2>
+      <button class="small" id="clear-hist" hidden>Clear</button>
+    </div>
+    <ul class="history" id="history"></ul>
+    <p class="empty-state" id="hist-empty">Keys you add to the history show up here, newest first. The list is kept only in this browser.</p>
+  </section>
+
+  <p class="foot">
+    The key only works for that name on that PC. If the player reinstalls Windows, the PC code changes and they need a new key.
+    The secret is the <code>Secret</code> value in <code>src/MiningAssistant.Core/Licensing/LicenseKey.cs</code>. Same algorithm as
+    <code>mining-cli keygen "Name" PC-CODE</code>: HMAC-SHA256 of <code>MA2|NAME|PC-CODE</code>, first 16 Crockford base-32 characters.
+  </p>
+</div>
+
+<script>
+(() => {
+  const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford: no I, L, O, U
+  // Known pair made by the app's own keygen: proves the pasted secret is the right one without storing it.
+  const CHECK = { name: "TEST", pc: "0000-0000", key: "RTJC-HR43-RZCF-JNJX" };
+  const STORE_SECRET = "mak.secret", STORE_HISTORY = "mak.history";
+  const $ = (id) => document.getElementById(id);
+
+  // ── same rules as LicenseKey.cs ──
+  // .NET ToUpperInvariant never changes a string's length (e.g. ß stays ß); JS toUpperCase can.
+  const upperInvariant = (s) => Array.from(s, (c) => { const u = c.toUpperCase(); return u.length === 1 ? u : c; }).join("");
+  const normalizeName = (n) => upperInvariant(n.trim().replace(/\s+/g, " "));
+  function clean(text, length) {
+    let out = "";
+    for (const raw of upperInvariant(text)) {
+      const c = raw === "O" ? "0" : raw === "I" || raw === "L" ? "1" : raw === "U" ? "V" : raw;
+      if (ALPHABET.includes(c)) out += c;
+      else if (!/\s/.test(c) && c !== "-") return null;
+    }
+    return out.length === length ? out : null;
+  }
+  const normalizePc = (code) => { const s = clean(code, 8); return s ? `${s.slice(0, 4)}-${s.slice(4)}` : null; };
+  function base32(bytes) {
+    let out = "", buffer = 0, bits = 0;
+    for (const b of bytes) {
+      buffer = ((buffer << 8) | b) & 0xFFFFF;
+      bits += 8;
+      while (bits >= 5) { out += ALPHABET[(buffer >> (bits - 5)) & 31]; bits -= 5; }
+    }
+    return out;
+  }
+  function secretBytes(hex) {
+    const h = hex.replace(/\s+/g, "");
+    if (!/^[0-9a-fA-F]{64}$/.test(h)) return null;
+    return Uint8Array.from(h.match(/../g), (x) => parseInt(x, 16));
+  }
+  async function generate(secret, name, pcCode) {
+    const n = normalizeName(name), pc = normalizePc(pcCode);
+    if (!n || !pc) return null;
+    const k = await crypto.subtle.importKey("raw", secret, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const mac = new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(`MA2|${n}|${pc}`)));
+    const s = base32(mac).slice(0, 16);
+    return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}`;
+  }
+  window.__keygen = { generate, normalizeName, normalizePc, secretBytes }; // for checks from the console
+
+  // ── storage (optional; the page works without it) ──
+  const read = (k, fallback) => { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } };
+  const write = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked */ } };
+
+  let secret = null, current = null, history = read(STORE_HISTORY, []);
+  if (!Array.isArray(history)) history = [];
+
+  async function checkSecret() {
+    const chip = $("secret-chip"), hint = $("secret-hint"), value = $("secret").value;
+    const bytes = secretBytes(value);
+    secret = null;
+    if (!globalThis.crypto?.subtle) { chip.className = "chip bad"; chip.textContent = "unsupported"; hint.className = "hint bad"; hint.textContent = "This browser view has no Web Crypto. Open the page from claude.ai (https)."; await update(); return; }
+    if (!value.trim()) { chip.className = "chip"; chip.textContent = "not entered"; hint.className = "hint"; hint.textContent = "It never leaves this browser. Keys are computed on this page."; }
+    else if (!bytes) { chip.className = "chip bad"; chip.textContent = "invalid"; hint.className = "hint bad"; hint.textContent = "The secret is 64 hexadecimal characters (0–9, A–F)."; }
+    else if ((await generate(bytes, CHECK.name, CHECK.pc)) !== CHECK.key) { chip.className = "chip bad"; chip.textContent = "wrong secret"; hint.className = "hint bad"; hint.textContent = "This is not the secret the app uses. Keys made with it would be rejected."; }
+    else { secret = bytes; chip.className = "chip ok"; chip.textContent = "verified"; hint.className = "hint"; hint.textContent = "Matches the app. It never leaves this browser."; }
+    if ($("remember").checked) write(STORE_SECRET, secret ? value.replace(/\s+/g, "") : null);
+    await update();
+  }
+
+  async function update() {
+    const keyEl = $("key"), forEl = $("for"), pcHint = $("pc-hint");
+    const name = $("name").value, pcRaw = $("pc").value;
+    const pc = normalizePc(pcRaw), n = normalizeName(name);
+    $("pc").setAttribute("aria-invalid", pcRaw.trim() && !pc ? "true" : "false");
+    pcHint.className = pcRaw.trim() && !pc ? "hint bad" : "hint";
+    pcHint.textContent = pcRaw.trim() && !pc ? "A PC code has 8 characters: XXXX-XXXX." : "From the player's activation window.";
+    current = null;
+    if (!secret) { keyEl.className = "key empty"; keyEl.textContent = "enter the secret"; forEl.textContent = n && pc ? `for ${name.trim()} on PC ${pc}` : "example: FJP on PC Q4MA-RYY0"; }
+    else if (!n || !pc) { keyEl.className = "key empty"; keyEl.textContent = "XXXX-XXXX-XXXX-XXXX"; forEl.textContent = "Enter the player's name and PC code."; }
+    else {
+      const key = await generate(secret, name, pcRaw);
+      current = { name: name.trim().replace(/\s+/g, " "), pc, key };
+      keyEl.className = "key"; keyEl.textContent = key; forEl.textContent = `for ${current.name} on PC ${pc}`;
+    }
+    for (const id of ["copy-key", "copy-msg", "save"]) $(id).disabled = !current;
+  }
+
+  function renderHistory() {
+    const list = $("history");
+    list.replaceChildren(...history.map((h, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="h-name"></span><span class="h-key"></span><span class="h-meta"></span><button class="small" type="button">Copy</button>`;
+      li.querySelector(".h-name").textContent = h.name;
+      li.querySelector(".h-key").textContent = h.key;
+      li.querySelector(".h-meta").textContent = `PC ${h.pc} · ${new Date(h.at).toLocaleDateString()}`;
+      li.querySelector("button").addEventListener("click", (e) => copy(h.key, e.currentTarget));
+      return li;
+    }));
+    $("hist-empty").hidden = history.length > 0;
+    $("clear-hist").hidden = history.length === 0;
+  }
+
+  async function copy(text, button) {
+    const label = button.textContent;
+    try { await navigator.clipboard.writeText(text); button.textContent = "Copied"; }
+    catch { $("key").focus?.(); const r = document.createRange(); r.selectNodeContents($("key")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); button.textContent = "Selected — press Ctrl+C"; }
+    setTimeout(() => (button.textContent = label), 1600);
+  }
+
+  $("secret").addEventListener("input", checkSecret);
+  $("remember").addEventListener("change", () => {
+    if ($("remember").checked) { write(STORE_SECRET, secret ? $("secret").value.replace(/\s+/g, "") : null); }
+    else write(STORE_SECRET, null);
+  });
+  $("name").addEventListener("input", update);
+  $("pc").addEventListener("input", update);
+  $("copy-key").addEventListener("click", (e) => current && copy(current.key, e.currentTarget));
+  $("copy-msg").addEventListener("click", (e) => current && copy(
+    `Mining Assistant key\nName: ${current.name}\nKey: ${current.key}\n(only works on the PC with code ${current.pc})`, e.currentTarget));
+  $("save").addEventListener("click", () => {
+    if (!current) return;
+    history = [{ ...current, at: Date.now() }, ...history.filter((h) => !(h.key === current.key))].slice(0, 200);
+    write(STORE_HISTORY, history);
+    renderHistory();
+  });
+  $("clear-hist").addEventListener("click", () => { history = []; write(STORE_HISTORY, history); renderHistory(); });
+
+  const saved = read(STORE_SECRET, null);
+  if (typeof saved === "string" && saved) { $("secret").value = saved; $("remember").checked = true; }
+  renderHistory();
+  checkSecret();
+})();
+</script>
