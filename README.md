@@ -1,10 +1,10 @@
-# Star Citizen Mining Assistant
+# Star Citizen Mining Assistant by Vorxen
 
 Overlay para Windows que **lê a tela** durante a mineração com Prospector/MOLE, reconhece o **RS (radar signature)** e mostra qual minério provavelmente é — incluindo **quantas rochas** há no cluster (RS = RS base × nº de rochas).
 
 ```
 ┌──────────────────────┐
-│ ⛏ MINING ASSISTANT   │
+│ ⛏ MINING ASSISTANT · by Vorxen │
 │ GOLD                 │
 │ RS 10,755            │
 │ 3 ROCKS              │

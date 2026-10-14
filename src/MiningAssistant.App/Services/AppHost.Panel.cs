@@ -162,7 +162,7 @@ public sealed partial class AppHost
         catch (Exception ex)
         {
             Log("Reload failed: " + ex);
-            System.Windows.MessageBox.Show("Reload failed:\n\n" + ex.Message, "Mining Assistant",
+            System.Windows.MessageBox.Show("Reload failed:\n\n" + ex.Message, "Mining Assistant by Vorxen",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
         UpdateStatus();

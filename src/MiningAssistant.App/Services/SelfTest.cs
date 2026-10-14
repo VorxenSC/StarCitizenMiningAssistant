@@ -30,7 +30,7 @@ public static class SelfTest
             catch (Exception ex) { failures++; sb.AppendLine($"[FAIL] {name}: {ex.GetType().Name}: {ex.Message}"); }
         }
 
-        sb.AppendLine($"Mining Assistant self-test — {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"Mining Assistant by Vorxen — self-test — {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"Folder: {paths.Root}");
         sb.AppendLine($"OS: {Environment.OSVersion} · .NET {Environment.Version} · 64-bit process: {Environment.Is64BitProcess}");
         sb.AppendLine();

@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -72,9 +72,9 @@ switch (cliArgs[0].ToLowerInvariant())
                 Directory.CreateDirectory(dumpDir);
                 File.WriteAllBytes(Path.Combine(dumpDir, Path.GetFileNameWithoutExtension(file) + ".ocr.png"), png);
             }
-            Console.WriteLine($"â”€â”€ {Path.GetFileName(file)}  [{(profile is null ? "whole image" : "ROI")}; {r.OcrTime.TotalMilliseconds:F0} ms]");
+            Console.WriteLine($"── {Path.GetFileName(file)}  [{(profile is null ? "whole image" : "ROI")}; {r.OcrTime.TotalMilliseconds:F0} ms]");
             Console.WriteLine("OCR RAW:     " + r.RawText);
-            Console.WriteLine("NUMBERS:     " + string.Join(", ", r.Reading.AllNumbers.Select(n => $"{n.Raw}â†’{n.Value}{(n.Substitutions > 0 ? $" ({n.Substitutions} subs)" : "")}")));
+            Console.WriteLine("NUMBERS:     " + string.Join(", ", r.Reading.AllNumbers.Select(n => $"{n.Raw}→{n.Value}{(n.Substitutions > 0 ? $" ({n.Substitutions} subs)" : "")}")));
             Console.WriteLine("DETECTED RS: " + (r.Reading.RS?.ToString() ?? "-"));
             PrintMatch(r.Match, r.Reading.RS?.ToString() ?? "-");
         }
@@ -97,7 +97,7 @@ switch (cliArgs[0].ToLowerInvariant())
             var r = await pipeline.AnalyzeScreenshotAsync(bmp, profile, false);
             var ok = r.Reading.RS == expected;
             if (ok) pass++; else fail++;
-            var label = r.Match?.Best is { } b ? $"{b.Material.Name} Ã—{b.RockCount} {r.Match.Status}" : r.Match?.Status.ToString() ?? "no RS";
+            var label = r.Match?.Best is { } b ? $"{b.Material.Name} ×{b.RockCount} {r.Match.Status}" : r.Match?.Status.ToString() ?? "no RS";
             if (!ok || verbose)
                 Console.WriteLine($"{(ok ? "PASS" : "FAIL")}  {Path.GetRelativePath(folder, file),-50} expected {expected,6}  got {r.Reading.RS?.ToString() ?? "-",6}  {label}" +
                                   (ok ? "" : $"\n      raw: {r.RawText}"));
@@ -117,7 +117,7 @@ switch (cliArgs[0].ToLowerInvariant())
         if (region is null) { Console.WriteLine("No RS region in profile."); return 2; }
         var monitor = Monitors.Get(int.TryParse(Opt("--monitor"), out var mi) ? mi : 0);
         var rect = monitor.ToScreen(settings.Ocr.SearchArea(region).ToPixels(monitor.Width, monitor.Height));
-        Console.WriteLine($"Monitor {monitor}; RS ROI {rect.Width}Ã—{rect.Height} at ({rect.X},{rect.Y})");
+        Console.WriteLine($"Monitor {monitor}; RS ROI {rect.Width}×{rect.Height} at ({rect.X},{rect.Y})");
         var capture = new GdiScreenCapture();
         for (var f = 0; f < frames; f++)
         {
@@ -132,7 +132,7 @@ switch (cliArgs[0].ToLowerInvariant())
                 roi.Save(Path.Combine(dumpDir, $"live_{stamp}_rs{r.Reading.RS?.ToString() ?? "none"}.png"), ImageFormat.Png);
                 if (r.ProcessedPng is { } png) File.WriteAllBytes(Path.Combine(dumpDir, $"live_{stamp}.ocr.png"), png);
             }
-            var label = r.Match?.Best is { } b ? $"{b.Material.Name} Ã—{b.RockCount} {r.Match.Status}" : r.Match?.Status.ToString() ?? "-";
+            var label = r.Match?.Best is { } b ? $"{b.Material.Name} ×{b.RockCount} {r.Match.Status}" : r.Match?.Status.ToString() ?? "-";
             Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff}  RS {r.Reading.RS?.ToString() ?? "-",6}  {label,-28} {r.OcrTime.TotalMilliseconds,4:F0} ms  raw: {r.RawText.Replace("\n", " | ")}");
             await Task.Delay(500);
         }
@@ -168,7 +168,7 @@ switch (cliArgs[0].ToLowerInvariant())
                 }
             copy.Save(Path.Combine(outDir, Path.GetFileNameWithoutExtension(file) + ".loc.png"), ImageFormat.Png);
         }
-        Console.WriteLine($"\nplates found in {found}/{total} images â†’ {outDir}");
+        Console.WriteLine($"\nplates found in {found}/{total} images → {outDir}");
         return 0;
     }
 
@@ -209,15 +209,15 @@ switch (cliArgs[0].ToLowerInvariant())
         {
             using var bmp = new Bitmap(file);
             var plate = MiningAssistant.Vision.Imaging.PlateLocator.Find(bmp).FirstOrDefault();
-            Console.WriteLine($"â”€â”€ {Path.GetFileName(file)}: {(plate is null ? "no plate" : $"icon {plate.Icon.Height}px, digits {plate.Digits.Width}x{plate.Digits.Height}")}");
+            Console.WriteLine($"── {Path.GetFileName(file)}: {(plate is null ? "no plate" : $"icon {plate.Icon.Height}px, digits {plate.Digits.Width}x{plate.Digits.Height}")}");
             if (plate is null) continue;
             foreach (var v in Enum.GetValues<MiningAssistant.Vision.Imaging.Variant>().Where(v => v.ToString().StartsWith("Plate")))
             foreach (var zoom in new[] { 0.7, 1.0, 1.4 })
             {
                 using var prepared = MiningAssistant.Vision.Imaging.ImageOps.PrepareDigits(bmp, plate, v, zoom);
-                var text = (await ocr.RecognizeAsync(prepared)).Text.Replace("\n", " âŽ ");
+                var text = (await ocr.RecognizeAsync(prepared)).Text.Replace("\n", " ⏎ ");
                 prepared.Save(Path.Combine(outDir, $"{Path.GetFileNameWithoutExtension(file)}_{v}_{zoom:F1}.png"), ImageFormat.Png);
-                Console.WriteLine($"   {v,-15} zoom {zoom:F1}  â€œ{text}â€");
+                Console.WriteLine($"   {v,-15} zoom {zoom:F1}  “{text}”");
             }
         }
         return 0;
@@ -237,7 +237,7 @@ switch (cliArgs[0].ToLowerInvariant())
                 var rr = r with { Y = Math.Min(bmp.Height - r.Height, r.Y + dy) };
                 using var crop = MiningAssistant.Vision.Imaging.ImageOps.Crop(bmp, rr);
                 var (c, f) = MiningAssistant.Vision.Imaging.ImageOps.TextStats(crop);
-                Console.WriteLine($"{Path.GetFileName(file),-50} dy={dy,4}  contrast {c,3}  bright {f,7:P2}  â†’ {(MiningAssistant.Vision.Imaging.ImageOps.HasText(crop) ? "TEXT" : "empty")}");
+                Console.WriteLine($"{Path.GetFileName(file),-50} dy={dy,4}  contrast {c,3}  bright {f,7:P2}  → {(MiningAssistant.Vision.Imaging.ImageOps.HasText(crop) ? "TEXT" : "empty")}");
             }
         }
         return 0;
@@ -292,9 +292,9 @@ static void PrintMatch(MatchResult? r, string input)
 static int Usage()
 {
     Console.WriteLine("""
-        mining-cli â€” offline tools for Star Citizen Mining Assistant
+        mining-cli — offline tools for Star Citizen Mining Assistant by Vorxen
 
-          match <rs> [rs...]            Explain RS values (materials Ã— rock count, confidence)
+          match <rs> [rs...]            Explain RS values (materials × rock count, confidence)
           analyze <image|folder>        OCR screenshot(s) and identify the RS
           regress [folder]              Regression test: files named *rs<NNNN>*.png must read that RS
           synth [folder]                Generate synthetic HUD-like test images (+ profile.roi.json)
@@ -364,7 +364,7 @@ static class Synth
                 using var brush = new SolidBrush(color);
                 var text = grouped ? rs.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) : rs.ToString();
                 g.DrawString(text, font, brush, roi.X + 12 + rng.Next(0, 30), roi.Y + 10 + rng.Next(0, 8));
-                g.DrawString("â—†", small, brush, roi.X - 18, roi.Y + 20);
+                g.DrawString("◆", small, brush, roi.X - 18, roi.Y + 20);
             }
             bmp.Save(Path.Combine(outDir, $"{name}__rs{rs}.png"), ImageFormat.Png);
             i++;

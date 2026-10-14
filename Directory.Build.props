@@ -5,7 +5,10 @@
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
     <Version>0.1.0</Version>
-    <Company>Star Citizen Mining Assistant (community tool, not affiliated with CIG)</Company>
+    <Product>Star Citizen Mining Assistant by Vorxen</Product>
+    <Authors>Vorxen</Authors>
+    <Company>Vorxen (community tool, not affiliated with CIG)</Company>
+    <Copyright>© Vorxen</Copyright>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Windows TFM for projects that need WinRT (Windows.Media.Ocr) and GDI capture. -->

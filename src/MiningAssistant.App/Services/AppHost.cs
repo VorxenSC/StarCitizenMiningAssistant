@@ -89,7 +89,7 @@ public sealed partial class AppHost : IDisposable
         }
         else
         {
-            MessageBox.Show(_ocrInfo + "\n\nSee README → 'Configure OCR'.", "Mining Assistant", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(_ocrInfo + "\n\nSee README → 'Configure OCR'.", "Mining Assistant by Vorxen", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         // Always open the control panel (unless turned off): starting silently in the tray looks like
@@ -105,12 +105,12 @@ public sealed partial class AppHost : IDisposable
             _db = MaterialDatabaseLoader.LoadForVersion(Paths.DataRoot, Settings.GameVersion);
             var problems = _db.Validate();
             if (problems.Count > 0)
-                MessageBox.Show("materials.json problems:\n\n" + string.Join("\n", problems), "Mining Assistant", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("materials.json problems:\n\n" + string.Join("\n", problems), "Mining Assistant by Vorxen", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
             Log("DB load failed: " + ex);
-            MessageBox.Show($"Could not load materials.json for '{Settings.GameVersion}':\n{ex.Message}", "Mining Assistant", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Could not load materials.json for '{Settings.GameVersion}':\n{ex.Message}", "Mining Assistant by Vorxen", MessageBoxButton.OK, MessageBoxImage.Error);
             _db = new MaterialDatabase();
         }
     }
@@ -501,7 +501,7 @@ public sealed partial class AppHost : IDisposable
         _tray = new WinForms.NotifyIcon
         {
             Icon = LoadTrayIcon(),
-            Text = "Star Citizen Mining Assistant",
+            Text = "Star Citizen Mining Assistant by Vorxen",
             ContextMenuStrip = menu,
             Visible = true,
         };

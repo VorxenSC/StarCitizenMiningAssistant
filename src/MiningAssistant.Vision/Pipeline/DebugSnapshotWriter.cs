@@ -42,7 +42,7 @@ public sealed class DebugSnapshotWriter
         var dir = Path.Combine(_root, stamp.ToString("yyyyMMdd_HHmmss_fff"));
         Directory.CreateDirectory(dir);
         var r = new StringBuilder();
-        r.AppendLine($"Mining Assistant debug snapshot — {stamp:yyyy-MM-dd HH:mm:ss.fff}");
+        r.AppendLine($"Mining Assistant by Vorxen — debug snapshot — {stamp:yyyy-MM-dd HH:mm:ss.fff}");
         if (!string.IsNullOrWhiteSpace(ctx.Note)) r.AppendLine($"Note: {ctx.Note}");
         r.AppendLine($"Monitor: {ctx.Monitor}");
         r.AppendLine($"Search area: {ctx.SearchArea.Width}×{ctx.SearchArea.Height} px at ({ctx.SearchArea.X},{ctx.SearchArea.Y})");

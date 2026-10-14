@@ -23,7 +23,7 @@ public partial class App : Application
         DispatcherUnhandledException += (_, ex) =>
         {
             WriteCrash("Unhandled (UI)", ex.Exception);
-            MessageBox.Show(ex.Exception.Message + "\n\nDetails: " + CrashLogPath, "Mining Assistant — error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Exception.Message + "\n\nDetails: " + CrashLogPath, "Mining Assistant by Vorxen — error", MessageBoxButton.OK, MessageBoxImage.Error);
             ex.Handled = true;
         };
 
@@ -48,7 +48,7 @@ public partial class App : Application
         {
             // Already running: ask that instance to show its control panel instead of doing nothing.
             try { EventWaitHandle.OpenExisting(ShowEventName).Set(); }
-            catch { MessageBox.Show("Mining Assistant is already running (see the tray icon).", "Mining Assistant"); }
+            catch { MessageBox.Show("Mining Assistant by Vorxen is already running (see the tray icon).", "Mining Assistant by Vorxen"); }
             _single.Dispose();
             _single = null;
             Shutdown();
@@ -65,8 +65,8 @@ public partial class App : Application
         catch (Exception ex)
         {
             WriteCrash("Startup failed", ex);
-            MessageBox.Show("Mining Assistant could not start:\n\n" + ex.Message + "\n\nDetails were written to:\n" + CrashLogPath,
-                "Mining Assistant", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Mining Assistant by Vorxen could not start:\n\n" + ex.Message + "\n\nDetails were written to:\n" + CrashLogPath,
+                "Mining Assistant by Vorxen", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
     }

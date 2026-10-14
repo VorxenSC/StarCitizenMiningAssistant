@@ -12,7 +12,7 @@ Set-Location $PSScriptRoot
 $app = 'src\MiningAssistant.App'
 
 if (Get-Process MiningAssistant -ErrorAction SilentlyContinue) {
-    throw 'MiningAssistant is running. Close it (control panel --- Exit app) and run this script again.'
+    throw 'MiningAssistant is running. Close it (control panel: Exit app) and run this script again.'
 }
 
 dotnet publish $app -c Release -r win-x64 --self-contained false -o publish -nologo -v q
