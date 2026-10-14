@@ -15,16 +15,24 @@ public enum PanelState { Running, Paused, Problem }
 /// <summary>One line of the control panel's health checklist.</summary>
 public sealed record HealthItem(bool Ok, string Title, string Detail);
 
+/// <summary>One line of "what the app sees": key, value and an optional dimmed note.</summary>
+public sealed record LiveRow(string Key, string Value, string Note = "");
+
 public sealed record PanelStatus(
     PanelState State,
+    /// <summary>"LABEL — detail" (the panel shows the label in bold).</summary>
     string Headline,
     IReadOnlyList<HealthItem> Health,
-    string Live,
+    IReadOnlyList<LiveRow> Live,
     BitmapSource? Preview,
     bool Scanning,
     /// <summary>Seconds left in the start countdown (0 = none).</summary>
     int Countdown,
-    bool OverlayVisible);
+    bool OverlayVisible)
+{
+    /// <summary>Plain-text form of <see cref="Live"/> (debug snapshot report).</summary>
+    public string LiveText => string.Join(Environment.NewLine, Live.Select(r => $"{r.Key}: {r.Value}{(r.Note.Length > 0 ? "  " + r.Note : "")}"));
+}
 
 /// <summary>Control-panel side of the host: live status, feature switches, reload / restart.</summary>
 public sealed partial class AppHost
@@ -230,6 +238,16 @@ public sealed partial class AppHost
     }
     public void OpenDiagnosticsFolder() => OpenFolder(Path.Combine(Paths.Root, "diagnostics"));
 
+    /// <summary>Dev preview (--render-panel): settings and database only — no scanner, overlay, hotkeys or tray.</summary>
+    internal Windows.SettingsWindow CreatePreviewPanel()
+    {
+        Settings = Paths.LoadSettings();
+        _profile = Paths.LoadProfile(Settings.ActiveProfile);
+        InitLearning();
+        LoadDatabase();
+        _settingsWindow = new Windows.SettingsWindow(this);
+        return _settingsWindow;
+    }
     // ───────────────────────── live status ─────────────────────────
 
     private PanelStatus BuildPanelStatus()
@@ -291,29 +309,29 @@ public sealed partial class AppHost
         health.Add(ContributionHealth());
 
         // What the scanner sees right now.
-        var live = new System.Text.StringBuilder();
-        if (paused) live.AppendLine(_countdown > 0 ? $"Starting in {_countdown}…" : "Scanning is OFF — click START.");
-        else if (frame?.Analysis is null) live.AppendLine(frame?.Error ?? "Waiting for the first frame…");
+        var live = new List<LiveRow>();
+        if (paused) live.Add(new("Scanning", _countdown > 0 ? $"starting in {_countdown}…" : "OFF", _countdown > 0 ? "" : "(click START)"));
+        else if (frame?.Analysis is null) live.Add(new("Scanning", frame?.Error ?? "waiting for the first frame…"));
         else
         {
             var a = frame.Analysis;
-            live.AppendLine(plate is not null
-                ? $"RS indicator: FOUND  (icon {plate.Icon.Width}×{plate.Icon.Height} px at {plate.Icon.X},{plate.Icon.Y})"
+            live.Add(plate is not null
+                ? new("RS indicator", "FOUND", $"(icon {plate.Icon.Width}×{plate.Icon.Height} px at {plate.Icon.X},{plate.Icon.Y})")
                 : Settings.Ocr.AutoLocate
-                    ? "RS indicator: not on screen  (normal when nothing is scanned)"
-                    : a.NoText ? "RS area: empty" : "RS area: has text");
-            live.AppendLine($"Read now:     {a.Reading.RS?.ToString("N0") ?? "—"}" +
-                            (a.Attempts.Count > 0 ? $"   (OCR: “{a.Attempts[^1].Text.Replace("\n", " ")}”)" : ""));
+                    ? new("RS indicator", "not on screen", "(normal when nothing is scanned)")
+                    : new("RS area", a.NoText ? "empty" : "has text"));
+            live.Add(new("Read now", a.Reading.RS?.ToString("N0") ?? "—",
+                a.Attempts.Count > 0 ? $"(OCR: “{a.Attempts[^1].Text.Replace("\n", " ")}”)" : ""));
             var s = frame.State;
-            live.AppendLine($"Stable value: {s.StableRS?.ToString("N0") ?? "—"}" + (s.IsHeld ? "  (last seen)" : ""));
+            live.Add(new("Stable value", s.StableRS?.ToString("N0") ?? "—", s.IsHeld ? "(last seen)" : ""));
             if (s.Match is { } m)
-                live.AppendLine("Result:       " + (m.Best is { } b
+                live.Add(new("Result", m.Best is { } b
                     ? $"{b.Label}  [{m.Status}]"
                     : m.Status == MatchStatus.Unknown ? "UNKNOWN signature" : m.Status.ToString()));
             var ctx = OverlayPresenter.ContextLabel(s);
-            live.AppendLine($"Location:     {ctx ?? "not detected yet"}");
+            live.Add(new("Location", ctx ?? "not detected yet"));
         }
-        live.Append($"Uptime {DateTime.Now - _startedAt:hh\\:mm\\:ss} · reloads {_reloads}");
+        live.Add(new("Uptime", $"{DateTime.Now - _startedAt:hh\\:mm\\:ss} · reloads {_reloads}"));
 
         var state = _ocr is null || region is null || _scanner is null ? PanelState.Problem
             : paused ? PanelState.Paused
@@ -324,12 +342,12 @@ public sealed partial class AppHost
         {
             PanelState.Running => plate is not null ? "RUNNING — reading the RS indicator" : "RUNNING — waiting for an RS indicator",
             PanelState.Paused => _countdown > 0
-                ? $"STARTING IN {_countdown}…  switch to the Star Citizen window now"
+                ? $"STARTING IN {_countdown}… — switch to the Star Citizen window now"
                 : "STOPPED — click START (a 5 s countdown gives you time to switch to the game)",
             _ => "NOT WORKING — " + (health.FirstOrDefault(h => !h.Ok)?.Title ?? "see below"),
         };
 
-        return new PanelStatus(state, headline, health, live.ToString(), BuildPreview(plate), !paused && _scanner is not null, _countdown, _overlayVisible);
+        return new PanelStatus(state, headline, health, live, BuildPreview(plate), !paused && _scanner is not null, _countdown, _overlayVisible);
     }
 
     private static string Describe(PixelRect r) => $"{r.Width}×{r.Height} px at ({r.X},{r.Y})";
@@ -350,7 +368,7 @@ public sealed partial class AppHost
             if (plate is not null)
             {
                 var b = plate.Bounds;
-                using var pen = new System.Drawing.Pen(System.Drawing.Color.Lime, 2);
+                using var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(0x3D, 0xDC, 0x97), 2);
                 g.DrawRectangle(pen, (float)(b.X * k) - 4, (float)(b.Y * k) - 4, (float)(b.Width * k) + 8, (float)(b.Height * k) + 8);
             }
         }

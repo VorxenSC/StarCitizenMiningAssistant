@@ -13,6 +13,7 @@ public partial class ActivationWindow : Window
     public ActivationWindow(string? previousName = null)
     {
         InitializeComponent();
+        Controls.VorxenChrome.Attach(this);
         NameBox.Text = previousName ?? "";
         Loaded += (_, _) => (NameBox.Text.Length == 0 ? NameBox : KeyBox).Focus();
     }

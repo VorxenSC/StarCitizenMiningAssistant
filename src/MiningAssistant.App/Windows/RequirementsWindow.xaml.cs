@@ -1,5 +1,6 @@
 using System.Windows;
-using System.Windows.Media;
+using System.Windows.Documents;
+using MiningAssistant.App.Controls;
 
 namespace MiningAssistant.App.Windows;
 
@@ -18,16 +19,16 @@ public partial class RequirementsWindow : Window
     public RequirementsWindow(string userName, IEnumerable<DetectedCondition> detected)
     {
         InitializeComponent();
-        if (userName.Length > 0) WelcomeRun.Text = $"   Welcome {userName}, Let's Rock and Roll!";
-        var ok = Freeze(new SolidColorBrush(Color.FromRgb(0x4A, 0xDE, 0x80)));
-        var warn = Freeze(new SolidColorBrush(Color.FromRgb(0xFA, 0xCC, 0x15)));
-        DetectedList.ItemsSource = detected.Select(d => new { Mark = d.Ok ? "✓" : "⚠", Color = d.Ok ? ok : warn, d.Text }).ToList();
-    }
-
-    private static Brush Freeze(Brush b)
-    {
-        b.Freeze();
-        return b;
+        VorxenChrome.Attach(this);
+        if (userName.Length > 0)
+        {
+            WelcomeText.Inlines.Add(new Run("Welcome "));
+            WelcomeText.Inlines.Add(new Italic(new Run(userName)));
+            WelcomeText.Inlines.Add(new Run(", Let's Rock and Roll!"));
+        }
+        DetectedList.ItemsSource = detected.ToList();
+        // Taller than a 1080p screen: never exceed the work area, scroll instead.
+        MaxHeight = SystemParameters.WorkArea.Height;
     }
 
     private void Ok_Click(object sender, RoutedEventArgs e) => Close();

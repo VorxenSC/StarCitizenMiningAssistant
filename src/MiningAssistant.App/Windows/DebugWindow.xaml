@@ -32,7 +32,7 @@
             </StackPanel>
         </Grid>
 
-        <TextBox x:Name="Report" IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" FontSize="12.5"
+        <TextBox x:Name="Report" IsReadOnly="True" VerticalContentAlignment="Stretch" Padding="8,6" FontFamily="Cascadia Mono, Consolas" FontSize="12.5"
                  Background="#FF020617" Foreground="#FFE2E8F0" BorderBrush="#FF334155"
                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" />
     </DockPanel>

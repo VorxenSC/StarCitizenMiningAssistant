@@ -5,9 +5,8 @@ using System.Drawing.Imaging;
 namespace MiningAssistant.Cli;
 
 /// <summary>
-/// Draws the app icon — an amber faceted ore crystal (the color of the in-game RS plate) with cyan
-/// scanner arcs on a dark rounded tile — and writes a multi-size .ico (PNG-compressed entries).
-/// Each size is drawn separately so 16–32 px stay crisp: small sizes drop the arcs and fine edges.
+/// Draws the app icon — the Vorxen logo mark (design/logo-mark-source.png, from the Claude Design canvas)
+/// on a dark rounded tile — and writes a multi-size .ico (PNG-compressed entries).
 /// Usage: mining-cli make-icon [out.ico]  (also writes a preview PNG next to it)
 /// </summary>
 internal static class IconGenerator
@@ -66,75 +65,47 @@ internal static class IconGenerator
         }
     }
 
-    /// <summary>Renders the icon at <paramref name="px"/> pixels; geometry is designed on a 256 grid.</summary>
+    /// <summary>Logo mark from the Claude Design canvas (transparent PNG), kept in design/.</summary>
+    private static Bitmap? _mark;
+
+    private static Bitmap Mark()
+    {
+        if (_mark is not null) return _mark;
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "MiningAssistant.sln"))) dir = dir.Parent;
+        var file = Path.Combine(dir?.FullName ?? ".", "design", "logo-mark-source.png");
+        return _mark = new Bitmap(file);
+    }
+
+    /// <summary>Renders the icon at <paramref name="px"/> pixels: the logo mark on a dark rounded tile.</summary>
     public static Bitmap Render(int px)
     {
         var bmp = new Bitmap(px, px, PixelFormat.Format32bppArgb);
         using var g = Graphics.FromImage(bmp);
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
         g.CompositingQuality = CompositingQuality.HighQuality;
-        var k = px / 256f;
-        g.ScaleTransform(k, k);
         var small = px <= 32;
 
-        // Tile: dark rounded square with an amber rim.
-        var inset = small ? 4f : 8f;
-        using (var tile = RoundedRect(new RectangleF(inset, inset, 256 - 2 * inset, 256 - 2 * inset), small ? 44 : 52))
+        // Tile: the app's stage color with a subtle steel-blue rim (readable on light and dark taskbars).
+        var inset = small ? 0f : px / 32f;
+        var tileRect = new RectangleF(inset, inset, px - 2 * inset, px - 2 * inset);
+        using (var tile = RoundedRect(tileRect, px * (small ? 0.18f : 0.2f)))
         {
-            using var bg = new LinearGradientBrush(new PointF(0, 0), new PointF(0, 256), Color.FromArgb(255, 22, 32, 52), Color.FromArgb(255, 7, 11, 20));
+            using var bg = new LinearGradientBrush(new PointF(0, 0), new PointF(0, px), Color.FromArgb(255, 18, 28, 40), Color.FromArgb(255, 8, 13, 20));
             g.FillPath(bg, tile);
-            using var rim = new Pen(Color.FromArgb(small ? 255 : 230, 245, 158, 11), small ? 14f : 7f);
+            using var rim = new Pen(Color.FromArgb(small ? 150 : 120, 53, 185, 255), Math.Max(1f, px / 48f));
             g.DrawPath(rim, tile);
         }
 
-        // Scanner arcs (radar ping) behind the crystal, top-right — only where there is room for them.
-        if (!small)
-        {
-            var c = new PointF(172, 84);
-            foreach (var (r, a) in new[] { (22f, 255), (38f, 200), (54f, 140) })
-            {
-                using var arc = new Pen(Color.FromArgb(a, 34, 211, 238), px >= 64 ? 9f : 12f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-                g.DrawArc(arc, c.X - r, c.Y - r, 2 * r, 2 * r, -78, 66);
-            }
-        }
-
-        // Ore crystal: hexagonal gem with three faces (light top, mid right, dark left).
-        var s = small ? 1.18f : 1f;           // bigger crystal on small icons
-        var ox = small ? -22f : -12f;         // keep it centered after scaling
-        var oy = small ? -16f : 6f;
-        PointF P(float x, float y) => new(x * s + ox, y * s + oy);
-
-        var top = P(124, 46); var ur = P(182, 92); var lr = P(170, 186); var bottom = P(124, 214);
-        var ll = P(78, 186); var ul = P(66, 92); var mid = P(124, 116);
-
-        void Face(PointF[] pts, Color from, Color to)
-        {
-            var minY = pts.Min(p => p.Y); var maxY = pts.Max(p => p.Y);
-            using var b = new LinearGradientBrush(new PointF(0, minY - 1), new PointF(0, maxY + 1), from, to);
-            g.FillPolygon(b, pts);
-        }
-
-        Face(new[] { top, ur, mid, ul }, Color.FromArgb(255, 254, 240, 138), Color.FromArgb(255, 250, 204, 21)); // top
-        Face(new[] { ur, lr, bottom, mid }, Color.FromArgb(255, 245, 158, 11), Color.FromArgb(255, 217, 119, 6)); // right
-        Face(new[] { ul, mid, bottom, ll }, Color.FromArgb(255, 217, 119, 6), Color.FromArgb(255, 146, 64, 14));  // left
-
-        using (var edge = new Pen(Color.FromArgb(255, 69, 26, 3), small ? 9f : 5f) { LineJoin = LineJoin.Round })
-            g.DrawPolygon(edge, new[] { top, ur, lr, bottom, ll, ul });
-
-        if (!small)
-        {
-            using var facet = new Pen(Color.FromArgb(150, 120, 53, 15), 3.5f) { LineJoin = LineJoin.Round };
-            g.DrawLines(facet, new[] { ul, mid, ur });
-            g.DrawLine(facet, mid, bottom);
-            // glint on the top face
-            using var glint = new SolidBrush(Color.FromArgb(220, 255, 255, 255));
-            g.FillPolygon(glint, new[] { P(108, 66), P(124, 58), P(132, 70), P(114, 80) });
-        }
-
+        // Mark (1037×720): as wide as the tile allows; bigger on tiny sizes, where detail is lost anyway.
+        var mark = Mark();
+        var w = px * (small ? 0.98f : 0.86f);
+        var h = w * mark.Height / mark.Width;
+        g.DrawImage(mark, (px - w) / 2, (px - h) / 2 + px * 0.02f, w, h);
         return bmp;
     }
-
     private static GraphicsPath RoundedRect(RectangleF r, float radius)
     {
         var d = radius * 2;

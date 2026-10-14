@@ -2,7 +2,10 @@ using System.Globalization;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using MiningAssistant.App.Controls;
 using MiningAssistant.App.Services;
 using MiningAssistant.Core.Matching;
 using MiningAssistant.Core.Materials;
@@ -17,20 +20,33 @@ namespace MiningAssistant.App.Windows;
 /// </summary>
 public partial class SettingsWindow : Window
 {
-    private static readonly Brush Ok = Frozen(0x4A, 0xDE, 0x80), Bad = Frozen(0xF8, 0x71, 0x71), Warn = Frozen(0xFA, 0xCC, 0x15);
-    private static readonly Brush OkBar = Frozen(0x14, 0x53, 0x2D), BadBar = Frozen(0x7F, 0x1D, 0x1D), WarnBar = Frozen(0x71, 0x3F, 0x12);
+    // Status bar colors from the design: (background, border, dot, text) per state.
+    private static readonly (Brush Bg, Brush Border, Brush Dot, Brush Text) RunningLook =
+        (Frozen(0x0F, 0x2A, 0x22), Frozen(0x1F, 0x5A, 0x44), Frozen(0x3D, 0xDC, 0x97), Frozen(0x9B, 0xF3, 0xC8));
+    private static readonly (Brush Bg, Brush Border, Brush Dot, Brush Text) PausedLook =
+        (Frozen(0x2A, 0x23, 0x14), Frozen(0x5C, 0x4A, 0x1E), Frozen(0xF2, 0xB3, 0x3D), Frozen(0xF6, 0xCF, 0x7E));
+    private static readonly (Brush Bg, Brush Border, Brush Dot, Brush Text) ProblemLook =
+        (Frozen(0x2A, 0x15, 0x19), Frozen(0x66, 0x30, 0x3A), Frozen(0xFF, 0x9A, 0xA0), Frozen(0xFF, 0xC2, 0xC6));
 
-    private static readonly Brush StartGreen = Frozen(0x16, 0xA3, 0x4A), StopButton = Frozen(0xB9, 0x1C, 0x1C), WarnButton = Frozen(0xB4, 0x53, 0x09);
+    private static readonly Brush StopRed = Frozen(0xC7, 0x3B, 0x42), CancelAmber = Frozen(0x5C, 0x4A, 0x1E), White = Frozen(0xFF, 0xFF, 0xFF);
 
     private readonly AppHost _host;
+    private readonly Storyboard _pulse = new() { RepeatBehavior = RepeatBehavior.Forever };
     private bool _loading;
 
     public SettingsWindow(AppHost host)
     {
         _host = host;
         InitializeComponent();
+        VorxenChrome.Attach(this);
         VersionText.Text = "v" + (Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?");
-        if (host.LicensedTo.Length > 0) WelcomeRun.Text = $"   ·   Welcome {host.LicensedTo}, Let's Rock and Roll!";
+        if (host.LicensedTo.Length > 0)
+        {
+            WelcomeText.Inlines.Add(new Run("Welcome "));
+            WelcomeText.Inlines.Add(new Italic(new Run(host.LicensedTo)));
+            WelcomeText.Inlines.Add(new Run(", Let's Rock and Roll!"));
+        }
+        BuildPulse();
         Closing += (_, e) => { e.Cancel = true; host.Paths.SaveSettings(host.Settings); Hide(); };
 
         // Resizable: never taller than the screen's work area; the size the user picks is remembered.
@@ -115,31 +131,77 @@ public partial class SettingsWindow : Window
     /// <summary>Live refresh (about once per second while the panel is open).</summary>
     public void Refresh(PanelStatus st)
     {
-        (StateBar.Background, StateDot.Fill) = st.State switch
+        var look = st.State switch
         {
-            PanelState.Running => (OkBar, Ok),
-            PanelState.Paused => (WarnBar, Warn),
-            _ => (BadBar, Bad),
+            PanelState.Running => RunningLook,
+            PanelState.Paused => PausedLook,
+            _ => ProblemLook,
         };
-        StateText.Text = st.Headline;
-        (StartButton.Content, StartButton.Background) =
-            st.Countdown > 0 ? ($"✕  CANCEL  ({st.Countdown})", WarnButton)
-            : st.Scanning ? ("■  STOP", StopButton)
-            : ("▶  START", StartGreen);
-        LiveText.Text = st.Live;
+        StateBar.Background = look.Bg;
+        StateBar.BorderBrush = look.Border;
+        StateDot.Fill = StatePulse.Fill = look.Dot;
+        StateText.Foreground = look.Text;
+        // "LABEL — detail": the label in bold heading type, the detail a little dimmer.
+        var dash = st.Headline.IndexOf(" — ", StringComparison.Ordinal);
+        StateLabel.Text = dash < 0 ? st.Headline : st.Headline[..dash];
+        StateSub.Text = dash < 0 ? "" : st.Headline[dash..];
+        StateSub.Foreground = new SolidColorBrush(((SolidColorBrush)look.Text).Color) { Opacity = 0.85 };
+
+        if (st.Countdown > 0) SetRunButton($"CANCEL ({st.Countdown})", "IconX", CancelAmber, look.Text, stroke: true);
+        else if (st.Scanning) SetRunButton("STOP", "IconStop", StopRed, White);
+        else SetRunButton("START", "IconPlay", (Brush)FindResource("Accent"), (Brush)FindResource("OnAccent"));
+
+        LiveList.ItemsSource = st.Live;
         if (st.Preview is not null) PreviewImage.Source = st.Preview;
         PreviewHint.Visibility = PreviewImage.Source is null ? Visibility.Visible : Visibility.Collapsed;
-        HealthList.ItemsSource = st.Health.Select(h => new
-        {
-            Mark = h.Ok ? "✓" : "✗",
-            Color = h.Ok ? Ok : Bad,
-            Title = h.Title + ":",
-            h.Detail,
-        }).ToList();
+        var mon = Monitors.Get(_host.Settings.MonitorIndex);
+        PreviewMonitor.Text = $"MONITOR #{mon.Index} · {mon.Width}×{mon.Height}";
+        PreviewInterval.Text = $"EVERY {_host.Settings.OcrIntervalMs} MS";
+        HealthList.ItemsSource = st.Health.Select(h => new { h.Ok, Title = h.Title + ":", h.Detail }).ToList();
 
         _loading = true;
         OverlaySwitch.IsChecked = st.OverlayVisible;
         _loading = false;
+    }
+
+    private void SetRunButton(string label, string icon, Brush background, Brush foreground, bool stroke = false)
+    {
+        StartLabel.Text = label;
+        StartButton.Background = background;
+        StartButton.Foreground = foreground;
+        StartIcon.Style = (Style)FindResource(stroke ? "Icon" : "FilledIcon");
+        StartIcon.Width = StartIcon.Height = 14;
+        StartIcon.Tag = FindResource(icon);
+    }
+
+    /// <summary>
+    /// The status dot's pulse ring (CSS "pulse" in the design). It only runs while the panel is on
+    /// screen, so a minimized / hidden panel costs nothing while the game runs.
+    /// </summary>
+    private void BuildPulse()
+    {
+        var duration = new Duration(TimeSpan.FromSeconds(1.8));
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        foreach (var prop in new[] { ScaleTransform.ScaleXProperty, ScaleTransform.ScaleYProperty })
+        {
+            var grow = new DoubleAnimation(1, 2.6, duration) { EasingFunction = ease };
+            Storyboard.SetTarget(grow, StatePulse);
+            Storyboard.SetTargetProperty(grow, new PropertyPath($"RenderTransform.{(prop == ScaleTransform.ScaleXProperty ? "ScaleX" : "ScaleY")}"));
+            _pulse.Children.Add(grow);
+        }
+        var fade = new DoubleAnimation(0.7, 0, duration) { EasingFunction = ease };
+        Storyboard.SetTarget(fade, StatePulse);
+        Storyboard.SetTargetProperty(fade, new PropertyPath(OpacityProperty));
+        _pulse.Children.Add(fade);
+
+        void Update()
+        {
+            var animate = IsVisible && WindowState != WindowState.Minimized && SystemParameters.ClientAreaAnimation;
+            if (animate) _pulse.Begin(this, true);
+            else _pulse.Stop(this);
+        }
+        IsVisibleChanged += (_, _) => Update();
+        StateChanged += (_, _) => Update();
     }
 
     // ───────────────────────── switches (apply immediately) ─────────────────────────

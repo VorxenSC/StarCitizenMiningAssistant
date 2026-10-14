@@ -219,7 +219,11 @@ public sealed partial class AppHost : IDisposable
         _debugWindow.ShowMessage(text);
     }
 
-    private void UpdateStatus() => _settingsWindow.Refresh(BuildPanelStatus());
+    private void UpdateStatus()
+    {
+        if (_hotkeys is null) return; // not started (off-screen panel preview)
+        _settingsWindow.Refresh(BuildPanelStatus());
+    }
 
     // ───────────────────────── actions ─────────────────────────
 
@@ -387,7 +391,7 @@ public sealed partial class AppHost : IDisposable
             var view = _lastFrame is { } f ? OverlayPresenter.Build(f.State, Settings) : OverlayView.Idle;
             var overlay = view.Kind == OverlayKind.Idle ? null
                 : $"{view.Headline} · {view.RsLine} · {view.RocksLine}" + (view.Alternatives.Count > 0 ? " · " + string.Join(" | ", view.Alternatives) : "");
-            var ctx = new SnapshotContext(mon, area, Settings, Settings.GameVersion, BuildPanelStatus().Live, overlay, null);
+            var ctx = new SnapshotContext(mon, area, Settings, Settings.GameVersion, BuildPanelStatus().LiveText, overlay, null);
             var matcher = new SignatureMatcher(_db, Settings.Matcher);
             var pipeline = new ScanPipeline(_ocr, matcher, Settings.Ocr);
             using var copy = new System.Drawing.Bitmap(screen);

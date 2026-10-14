@@ -31,6 +31,9 @@
     <None Include="..\..\data\**\*" LinkBase="data" CopyToOutputDirectory="PreserveNewest" />
     <!-- Window / tray icon (same file as the exe icon). -->
     <Resource Include="Assets\app.ico" />
+    <!-- Logo from the Claude Design canvas (source files in design/). -->
+    <Resource Include="Assets\logo-mark.png" />
+    <Resource Include="Assets\logo-full.jpg" />
   </ItemGroup>
 
 </Project>

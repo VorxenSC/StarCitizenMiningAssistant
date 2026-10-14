@@ -12,6 +12,7 @@ public partial class App : Application
     private const string ShowEventName = "StarCitizenMiningAssistant.ShowPanel";
 
     private AppHost? _host;
+    private static bool _headless;
     private Mutex? _single;
     private EventWaitHandle? _showEvent;
 
@@ -19,12 +20,14 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        _headless = e.Args.Any(a => a.StartsWith("--render-", StringComparison.Ordinal) || a == "--selftest");
         AppDomain.CurrentDomain.UnhandledException += (_, ex) => WriteCrash("Unhandled (domain)", ex.ExceptionObject as Exception);
         DispatcherUnhandledException += (_, ex) =>
         {
             WriteCrash("Unhandled (UI)", ex.Exception);
-            MessageBox.Show(ex.Exception.Message + "\n\nDetails: " + CrashLogPath, "Mining Assistant by Vorxen — error", MessageBoxButton.OK, MessageBoxImage.Error);
             ex.Handled = true;
+            if (_headless) return; // dev renders / self-test never show dialogs on the user's screen
+            MessageBox.Show(ex.Exception.Message + "\n\nDetails: " + CrashLogPath, "Mining Assistant by Vorxen — error", MessageBoxButton.OK, MessageBoxImage.Error);
         };
 
         // "--selftest": check this PC headlessly, write config/selftest.txt and exit (no window).
@@ -49,31 +52,27 @@ public partial class App : Application
             return;
         }
 
-        // "--render-activation <png>" / "--render-requirements <png>": dev checks of those windows, drawn off-screen.
-        var activation = Array.IndexOf(e.Args, "--render-activation");
-        var requirements = Array.IndexOf(e.Args, "--render-requirements");
-        if (requirements >= 0 && requirements + 1 < e.Args.Length) activation = requirements;
-        if (activation >= 0 && activation + 1 < e.Args.Length)
+        // "--render-activation <png>" / "--render-requirements <png>" / "--render-panel <png>": dev checks of
+        // those windows, drawn off-screen (nothing appears on the user's screen).
+        foreach (var flag in new[] { "--render-activation", "--render-requirements", "--render-panel" })
         {
-            Window w = requirements >= 0
-                ? new Windows.RequirementsWindow("Vorxen", new[] { new Windows.DetectedCondition(true, "Game monitor #0: 1920×1080 — resolution OK"), new Windows.DetectedCondition(false, "Text recognition missing — example warning") })
-                : new Windows.ActivationWindow("Vorxen");
-            w.Left = -20000; w.Top = -20000; w.WindowStartupLocation = WindowStartupLocation.Manual; w.ShowActivated = false;
-            w.Show();
-            w.UpdateLayout();
-            var content = (FrameworkElement)w.Content;
-            var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap((int)w.ActualWidth, (int)content.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-            var bg = new System.Windows.Media.DrawingVisual();
-            using (var dc = bg.RenderOpen()) dc.DrawRectangle(w.Background, null, new Rect(0, 0, w.ActualWidth, content.ActualHeight));
-            rtb.Render(bg);
-            rtb.Render(content);
-            var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
-            enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
-            using (var fs = File.Create(e.Args[activation + 1])) enc.Save(fs);
+            var at = Array.IndexOf(e.Args, flag);
+            if (at < 0 || at + 1 >= e.Args.Length) continue;
+            Window w = flag switch
+            {
+                "--render-activation" => new Windows.ActivationWindow("Vorxen"),
+                "--render-requirements" => new Windows.RequirementsWindow("Vorxen", new[]
+                {
+                    new Windows.DetectedCondition(true, "Game monitor #0: 1920×1080 — resolution OK"),
+                    new Windows.DetectedCondition(true, "Text recognition: Windows OCR (en-US)"),
+                    new Windows.DetectedCondition(false, "Text recognition missing — example warning"),
+                }),
+                _ => PreviewPanel(),
+            };
+            RenderOffscreen(w, e.Args[at + 1]);
             Shutdown(0);
             return;
         }
-
         // "--restart": started by a running instance that is closing; wait for it to let go.
         var restarting = e.Args.Contains("--restart");
         _single = new Mutex(false, MutexName);
@@ -117,6 +116,46 @@ public partial class App : Application
         }
     }
 
+    private static Window PreviewPanel()
+    {
+        var host = new AppHost { LicensedTo = "Vorxen" };
+        var panel = host.CreatePreviewPanel();
+        panel.Refresh(new PanelStatus(PanelState.Running, "RUNNING — waiting for an RS indicator",
+            new[]
+            {
+                new HealthItem(true, "Text recognition (Windows OCR)", "Windows OCR (en-US)"),
+                new HealthItem(true, "Signature database", "default: 26 ores + 10 other signals"),
+                new HealthItem(true, "Resolution", "1920×1080 (1080p or higher is supported)"),
+                new HealthItem(true, "Hotkeys", "listening · keys received: 2"),
+                new HealthItem(false, "Search area is clear", "this window is on top of the search area — while it is in front, the app sees this panel instead of the game"),
+            },
+            new[]
+            {
+                new LiveRow("RS indicator", "not on screen", "(normal when nothing is scanned)"),
+                new LiveRow("Read now", "—"),
+                new LiveRow("Stable value", "—"),
+                new LiveRow("Location", "not detected yet"),
+                new LiveRow("Uptime", "00:00:20 · reloads 0"),
+            },
+            null, true, 0, true));
+        return panel;
+    }
+
+    /// <summary>Shows the window far off-screen, renders it (caption bar included) to a PNG and closes it.</summary>
+    private static void RenderOffscreen(Window w, string png)
+    {
+        w.WindowStartupLocation = WindowStartupLocation.Manual;
+        w.Left = -20000; w.Top = -20000; w.ShowActivated = false;
+        w.MaxHeight = double.PositiveInfinity; // the whole page, not the scrolled view
+        w.Show();
+        w.UpdateLayout();
+        var root = (FrameworkElement)System.Windows.Media.VisualTreeHelper.GetChild(w, 0);
+        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap((int)root.ActualWidth, (int)root.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        rtb.Render(root);
+        var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+        using (var fs = File.Create(png)) enc.Save(fs);
+    }
     /// <summary>The stored activation if valid; otherwise shows the activation window. Null license = user exited.</summary>
     private static (Core.Licensing.License? license, bool justActivated) EnsureLicense()
     {
