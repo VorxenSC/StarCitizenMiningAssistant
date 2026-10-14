@@ -27,6 +27,29 @@
         <TextBlock Text="Enter your name and the key you received to activate the app." Foreground="{StaticResource TextMuted}"
                    FontSize="14.5" TextWrapping="Wrap" Margin="0,16,0,0" />
 
+        <!-- This PC's code: the key is made for name + this code -->
+        <Border Style="{StaticResource Card}" Padding="16,12" Margin="0,18,0,0">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" MinHeight="38" Padding="14,0" FontSize="13.5" Click="CopyCode_Click" VerticalAlignment="Center"
+                        ToolTip="Copies your name and this PC code, ready to send to Vorxen">
+                    <TextBlock x:Name="CopyLabel" Text="Copy name + code" />
+                </Button>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="YOUR PC CODE" Style="{StaticResource FieldLabel}" Margin="0,0,0,4" />
+                    <TextBox x:Name="PcCodeText" IsReadOnly="True" BorderThickness="0" Background="Transparent" Padding="0" MinHeight="0"
+                             FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" FontSize="20" Foreground="{StaticResource Accent}">
+                        <TextBox.Template>
+                            <ControlTemplate TargetType="TextBox">
+                                <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                            </ControlTemplate>
+                        </TextBox.Template>
+                    </TextBox>
+                    <TextBlock Text="No key yet? Send your name and this code to Vorxen. The key only works on this PC."
+                               Foreground="{StaticResource TextDim}" FontSize="12.5" TextWrapping="Wrap" Margin="0,4,12,0" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
         <TextBlock Text="NAME" Style="{StaticResource FieldLabel}" Margin="0,22,0,7" />
         <TextBox x:Name="NameBox" MinHeight="48" FontSize="16" Padding="16,0" />
 
@@ -41,7 +64,7 @@
             <Button Content="ACTIVATE" Style="{StaticResource PrimaryBtn}" MinHeight="46" Margin="10,0,0,0" Click="Activate_Click" IsDefault="True" />
         </StackPanel>
         <Border BorderBrush="{StaticResource CardBorder}" BorderThickness="0,1,0,0" Margin="0,16,0,0" Padding="0,14,0,0">
-            <TextBlock Text="The key is tied to your name and only needs to be entered once on this PC."
+            <TextBlock Text="The key is tied to your name and to this PC, and only needs to be entered once."
                        Foreground="{StaticResource TextDim}" FontSize="12.5" TextWrapping="Wrap" />
         </Border>
     </StackPanel>

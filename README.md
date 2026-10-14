@@ -67,6 +67,19 @@ powershell -ExecutionPolicy Bypass -File publish.ps1
 3. Abrir o `.exe` de novo com o app já rodando traz o painel para a frente; antes, parecia que "nada acontecia".
 4. Erros de inicialização aparecem numa mensagem e ficam em `config\crash.log`.
 
+### Ativação (key por nome + PC)
+
+Na primeira vez o app pede **nome** e **key**. A key vale para aquele nome **naquele PC**: copiar a pasta instalada (ou passar a key) para outro computador não ativa o app.
+
+1. O jogador abre o app e clica **Copy name + code**: copia o nome e o **código do PC** (`XXXX-XXXX`) para mandar ao Vorxen.
+2. Vorxen gera a key:
+   ```bash
+   dotnet run --project src/MiningAssistant.Cli -- keygen "Nome do Jogador" XXXX-XXXX
+   ```
+3. O jogador digita a key e clica **ACTIVATE** (só uma vez neste PC).
+
+O código do PC é um hash do identificador da instalação do Windows (`MachineGuid`, lido localmente, nunca enviado). Ele muda se o Windows for reinstalado; aí o jogador precisa de uma key nova. Keys antigas, só por nome (até a v0.1.2), não são mais aceitas.
+
 ### Compilar e testar
 
 ```bash

@@ -60,7 +60,7 @@ public partial class App : Application
             if (at < 0 || at + 1 >= e.Args.Length) continue;
             Window w = flag switch
             {
-                "--render-activation" => new Windows.ActivationWindow("Vorxen"),
+                "--render-activation" => new Windows.ActivationWindow("Vorxen", Services.MachineIdentity.Code),
                 "--render-requirements" => new Windows.RequirementsWindow("Vorxen", new[]
                 {
                     new Windows.DetectedCondition(true, "Game monitor #0: 1920×1080 — resolution OK"),
@@ -159,6 +159,7 @@ public partial class App : Application
         enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
         using (var fs = File.Create(png)) enc.Save(fs);
     }
+
     /// <summary>The stored activation if valid; otherwise shows the activation window. Null license = user exited.</summary>
     private static (Core.Licensing.License? license, bool justActivated) EnsureLicense()
     {
@@ -170,9 +171,13 @@ public partial class App : Application
                 stored = Core.Json.Deserialize<Core.Licensing.License>(File.ReadAllText(paths.LicenseFile));
         }
         catch { /* unreadable → ask again */ }
-        if (stored is { IsValid: true }) return (stored, false);
+        var pc = Services.MachineIdentity.Code;
+        if (stored is not null && stored.IsValidOn(pc)) return (stored, false);
 
-        var window = new Windows.ActivationWindow(stored?.Name);
+        // A stored activation that does not fit this PC: copied from another computer, Windows was
+        // reinstalled, or it is an old name-only key (before v0.1.3).
+        var window = new Windows.ActivationWindow(stored?.Name, pc,
+            stored is null ? null : "The saved activation is not valid on this PC. Send your name and the PC code below to Vorxen to get a key for this PC.");
         if (window.ShowDialog() != true || window.Result is null) return (null, false);
         Core.Json.Save(paths.LicenseFile, window.Result);
         return (window.Result, true);

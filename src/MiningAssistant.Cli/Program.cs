@@ -211,10 +211,19 @@ switch (cliArgs[0].ToLowerInvariant())
 
     case "keygen":
     {
-        // Developer tool: license key for a user name (the app asks for name + key on first run).
-        if (cliArgs.Count < 2) { Console.WriteLine("usage: mining-cli keygen \"User Name\" [\"Other Name\" ...]"); return 1; }
-        foreach (var name in cliArgs.Skip(1))
-            Console.WriteLine($"{name,-30} {MiningAssistant.Core.Licensing.LicenseKey.Generate(name)}");
+        // Developer tool: license key for a user name on one PC. The player reads the PC code in the
+        // activation window ("Copy name + code") and sends it with the name.
+        if (cliArgs.Count < 3 || cliArgs.Count % 2 == 0)
+        {
+            Console.WriteLine("usage: mining-cli keygen \"User Name\" PC-CODE [\"Other Name\" PC-CODE ...]");
+            return 1;
+        }
+        for (var i = 1; i + 1 < cliArgs.Count; i += 2)
+        {
+            var (name, code) = (cliArgs[i], cliArgs[i + 1]);
+            if (MiningAssistant.Core.Licensing.PcCode.Normalize(code) is not { } pc) { Console.WriteLine($"{name,-30} invalid PC code: {code}"); continue; }
+            Console.WriteLine($"{name,-30} PC {pc}   key {MiningAssistant.Core.Licensing.LicenseKey.Generate(name, pc)}");
+        }
         return 0;
     }
 

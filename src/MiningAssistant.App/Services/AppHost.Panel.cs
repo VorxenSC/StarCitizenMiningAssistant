@@ -196,7 +196,7 @@ public sealed partial class AppHost
     /// <summary>Forgets this activation and restarts, so the activation window asks for a name and key again.</summary>
     public void ChangeLicense()
     {
-        var ok = System.Windows.MessageBox.Show($"Forget the activation for “{LicensedTo}” and enter another name and key?\n\nThe app will restart.",
+        var ok = System.Windows.MessageBox.Show($"Forget the activation for “{LicensedTo}” and enter another name and key?\n\nThe key must have been made for this PC. The app will restart.",
             "Mining Assistant by Vorxen", System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Question);
         if (ok != System.Windows.MessageBoxResult.OK) return;
         if (File.Exists(Paths.LicenseFile)) File.Delete(Paths.LicenseFile);
