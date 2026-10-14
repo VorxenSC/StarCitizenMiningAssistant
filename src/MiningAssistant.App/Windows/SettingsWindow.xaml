@@ -1,6 +1,7 @@
 <Window x:Class="MiningAssistant.App.Windows.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="/Assets/app.ico"
         Title="Star Citizen Mining Assistant — Control Panel" Width="680" SizeToContent="Height" MaxHeight="940"
         ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
         Background="#FF0F172A" Foreground="#FFE2E8F0" FontFamily="Segoe UI" FontSize="13">

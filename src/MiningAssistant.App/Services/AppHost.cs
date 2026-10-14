@@ -432,6 +432,23 @@ public sealed partial class AppHost : IDisposable
             Log("Hotkey problems: " + string.Join("; ", _hotkeys.Failures));
     }
 
+    /// <summary>The app icon at tray size (falls back to the generic Windows icon if it cannot be read).</summary>
+    private static System.Drawing.Icon LoadTrayIcon()
+    {
+        try
+        {
+            var res = Application.GetResourceStream(new Uri("pack://application:,,,/Assets/app.ico"));
+            if (res is not null)
+            {
+                using var stream = res.Stream;
+                var size = WinForms.SystemInformation.SmallIconSize;
+                return new System.Drawing.Icon(stream, size);
+            }
+        }
+        catch { /* fall through */ }
+        return System.Drawing.SystemIcons.Application;
+    }
+
     private void CreateTray()
     {
         var menu = new WinForms.ContextMenuStrip();
@@ -450,7 +467,7 @@ public sealed partial class AppHost : IDisposable
 
         _tray = new WinForms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadTrayIcon(),
             Text = "Star Citizen Mining Assistant",
             ContextMenuStrip = menu,
             Visible = true,

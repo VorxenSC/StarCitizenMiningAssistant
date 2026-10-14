@@ -1,6 +1,7 @@
 <Window x:Class="MiningAssistant.App.Windows.DebugWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="/Assets/app.ico"
         Title="Mining Assistant — Debug" Width="760" Height="640"
         Background="#FF0F172A" Foreground="#FFE2E8F0" FontFamily="Segoe UI">
     <DockPanel Margin="10">

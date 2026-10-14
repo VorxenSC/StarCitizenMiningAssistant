@@ -172,6 +172,15 @@ switch (cliArgs[0].ToLowerInvariant())
         return 0;
     }
 
+    case "make-icon":
+    {
+        var ico = cliArgs.Count > 1 ? cliArgs[1] : Path.Combine(FindRepoRoot() ?? ".", "src", "MiningAssistant.App", "Assets", "app.ico");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(ico))!);
+        MiningAssistant.Cli.IconGenerator.Write(ico);
+        Console.WriteLine($"Wrote {ico} (+ {Path.ChangeExtension(ico, ".preview.png")})");
+        return 0;
+    }
+
     case "snapshot":
     {
         // Re-runs the debug-snapshot analysis on a full-screen image (e.g. a snapshot's 1_screen.png).
