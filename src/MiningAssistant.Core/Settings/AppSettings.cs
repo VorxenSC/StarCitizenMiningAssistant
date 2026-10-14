@@ -97,7 +97,7 @@ public sealed class OverlaySettings
 }
 
 /// <summary>
-/// Chords like "Ctrl+Shift+M", key names like "PageUp", or a single symbol like "\" (resolved through the
+/// Chords like "Ctrl+Shift+M", key names like "PageUp", or a single symbol like "/" (resolved through the
 /// keyboard layout, so it works on ABNT2 and US). Keys are only observed, never blocked: avoid keys the game uses.
 /// </summary>
 public sealed class HotkeySettings
@@ -108,7 +108,7 @@ public sealed class HotkeySettings
     /// <summary>Toggles overlay move mode (drag it anywhere, press again or double-click to lock).</summary>
     public string MoveOverlay { get; set; } = "PageDown";
     /// <summary>Saves a full debug snapshot of this moment (screen, plate, OCR inputs, report) into debug_snapshots/.</summary>
-    public string DebugSnapshot { get; set; } = "\\";
+    public string DebugSnapshot { get; set; } = "/";
 
     // Desktop / secondary actions.
     public string QuickScan { get; set; } = "Ctrl+Shift+S";
@@ -123,7 +123,7 @@ public sealed class AppSettings
 {
     /// <summary>Settings format; older files are upgraded once by <see cref="Migrate"/>.</summary>
     public int ConfigVersion { get; set; }
-    public const int CurrentConfigVersion = 2;
+    public const int CurrentConfigVersion = 3;
 
     /// <summary>
     /// Upgrades settings saved by an older version. Returns true when something changed (save the file).
@@ -132,6 +132,7 @@ public sealed class AppSettings
     ///                overlay Page Up, snapshot Page Down.
     ///   v2 (v0.1.6): Page Down moves the overlay and "\" takes the snapshot (swapped only while both
     ///                are still the v1 defaults, so two actions never end up on the same key).
+    ///   v3 (v0.1.7): the snapshot key is "/" instead of "\".
     /// </summary>
     public bool Migrate()
     {
@@ -144,6 +145,8 @@ public sealed class AppSettings
         }
         if (ConfigVersion < 2 && h.DebugSnapshot == "PageDown" && h.MoveOverlay == "\\")
             (h.DebugSnapshot, h.MoveOverlay) = ("\\", "PageDown");
+        if (ConfigVersion < 3 && h.DebugSnapshot == "\\" && h.MoveOverlay != "/")
+            h.DebugSnapshot = "/";
         ConfigVersion = CurrentConfigVersion;
         return true;
     }

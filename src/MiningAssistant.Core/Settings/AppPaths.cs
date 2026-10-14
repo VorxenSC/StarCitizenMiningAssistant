@@ -16,7 +16,7 @@ public sealed class AppPaths
     public string ConfigRoot => Path.Combine(Root, "config");
     public string SettingsFile => Path.Combine(ConfigRoot, "settings.json");
     public string ProfilesRoot => Path.Combine(ConfigRoot, "profiles");
-    /// <summary>Debug snapshots taken with the snapshot hotkey (\), one folder per snapshot.</summary>
+    /// <summary>Debug snapshots taken with the snapshot hotkey (/), one folder per snapshot.</summary>
     public string DebugSnapshotsRoot => Path.Combine(Root, "debug_snapshots");
     public string MissedReadsRoot => Path.Combine(Root, "diagnostics", "missed");
     /// <summary>Signatures the user named in the unknown-signature pop-up.</summary>

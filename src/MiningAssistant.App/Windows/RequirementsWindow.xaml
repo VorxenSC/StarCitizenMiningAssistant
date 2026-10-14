@@ -141,7 +141,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <Border Style="{StaticResource InlineKbd}"><TextBlock Text="Page Up" Style="{StaticResource KeyText}" /></Border>
                                 <Border Style="{StaticResource InlineKbd}" Margin="4,0"><TextBlock Text="Page Down" Style="{StaticResource KeyText}" /></Border>
-                                <Border Style="{StaticResource InlineKbd}"><TextBlock Text="\" Style="{StaticResource KeyText}" /></Border>
+                                <Border Style="{StaticResource InlineKbd}"><TextBlock Text="/" Style="{StaticResource KeyText}" /></Border>
                             </StackPanel>
                         </InlineUIContainer><Run Text=") inside the game. Run both normally (or both as administrator)." />
                     </TextBlock>
@@ -166,7 +166,7 @@
             <Border BorderBrush="{StaticResource CardBorder}" BorderThickness="0,1,0,0" Margin="0,30,0,0" Padding="0,20,0,0">
                 <TextBlock FontSize="13.5" LineHeight="21.6" Foreground="{StaticResource TextDim}" TextWrapping="Wrap">
                     <Run Text="Something not working? Run the self-test (it checks all of the above that can be checked), and press" />
-                    <InlineUIContainer BaselineAlignment="Center"><Border Style="{StaticResource InlineKbd}"><TextBlock Text="\" Style="{StaticResource KeyText}" /></Border></InlineUIContainer>
+                    <InlineUIContainer BaselineAlignment="Center"><Border Style="{StaticResource InlineKbd}"><TextBlock Text="/" Style="{StaticResource KeyText}" /></Border></InlineUIContainer>
                     <Run Text="in the game when the code is visible but not read — that saves a snapshot for analysis." />
                 </TextBlock>
             </Border>

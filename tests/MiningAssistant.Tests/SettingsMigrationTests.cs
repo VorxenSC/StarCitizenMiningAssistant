@@ -1,4 +1,4 @@
-﻿using MiningAssistant.Core.Settings;
+using MiningAssistant.Core.Settings;
 
 namespace MiningAssistant.Tests;
 
@@ -8,9 +8,9 @@ public class SettingsMigrationTests
     private static (string, string, string) Keys(AppSettings s) => (s.Hotkeys.ToggleOverlay, s.Hotkeys.MoveOverlay, s.Hotkeys.DebugSnapshot);
 
     [Fact]
-    public void New_settings_use_page_up_page_down_and_backslash()
+    public void New_settings_use_page_up_page_down_and_slash()
     {
-        Assert.Equal(("PageUp", "PageDown", "\\"), Keys(new AppSettings()));
+        Assert.Equal(("PageUp", "PageDown", "/"), Keys(new AppSettings()));
     }
 
     [Fact]
@@ -19,7 +19,7 @@ public class SettingsMigrationTests
         // settings.json written by v0.1.4 or older: no configVersion, "[" overlay, "]" snapshot, "\" move
         var s = FromJson("""{"hotkeys":{"toggleOverlay":"[","debugSnapshot":"]","moveOverlay":"\\"}}""");
         Assert.True(s.Migrate());
-        Assert.Equal(("PageUp", "PageDown", "\\"), Keys(s));
+        Assert.Equal(("PageUp", "PageDown", "/"), Keys(s));
         Assert.Equal(AppSettings.CurrentConfigVersion, s.ConfigVersion);
         Assert.False(s.Migrate()); // only once
     }
@@ -30,9 +30,17 @@ public class SettingsMigrationTests
         // v0.1.5: overlay Page Up, snapshot Page Down, move "\"
         var s = FromJson("""{"configVersion":1,"hotkeys":{"toggleOverlay":"PageUp","debugSnapshot":"PageDown","moveOverlay":"\\"}}""");
         Assert.True(s.Migrate());
-        Assert.Equal(("PageUp", "PageDown", "\\"), Keys(s));
+        Assert.Equal(("PageUp", "PageDown", "/"), Keys(s));
         Assert.Equal("PageDown", s.Hotkeys.MoveOverlay);
-        Assert.Equal("\\", s.Hotkeys.DebugSnapshot);
+        Assert.Equal("/", s.Hotkeys.DebugSnapshot);
+    }
+
+    [Fact]
+    public void V016_backslash_snapshot_becomes_slash()
+    {
+        var s = FromJson("""{"configVersion":2,"hotkeys":{"toggleOverlay":"PageUp","debugSnapshot":"\\","moveOverlay":"PageDown"}}""");
+        Assert.True(s.Migrate());
+        Assert.Equal(("PageUp", "PageDown", "/"), Keys(s));
     }
 
     [Fact]

@@ -86,7 +86,7 @@ public sealed class HotkeyManager : IDisposable
                 case "alt": modifiers |= Win32.MOD_ALT; break;
                 case "win": modifiers |= Win32.MOD_WIN; break;
                 default:
-                    // Single symbol ("[", "]", "\"): resolve through the active keyboard layout, so the
+                    // Single symbol ("/", "\", "["): resolve through the active keyboard layout, so the
                     // key that types that character is used (ABNT2 and US place them differently).
                     if (raw.Length == 1 && !char.IsLetterOrDigit(raw[0]))
                     {
