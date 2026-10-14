@@ -79,11 +79,17 @@ public partial class SettingsWindow : Window
         OpacitySlider.Value = s.Overlay.Opacity;
 
         var h = s.Hotkeys;
-        HotkeysText.Text =
-            $"{h.ToggleOverlay,-14} show / hide overlay\n{h.DebugSnapshot,-14} debug snapshot of this moment (→ debug_snapshots)\n" +
-            $"{h.MoveOverlay,-14} move overlay (drag, press again to lock)\n{h.QuickScan,-14} scan now\n" +
-            $"{h.PauseOcr,-14} scanning on / off\n{h.Calibration,-14} calibrate search area\n" +
-            $"{h.DebugWindow,-14} debug window\n{h.CycleContext,-14} location context Auto / Space / Surface";
+        HotkeyList.ItemsSource = new[]
+        {
+            new { Key = h.ToggleOverlay, Action = "Show / hide the overlay" },
+            new { Key = h.DebugSnapshot, Action = "Debug snapshot of this moment" },
+            new { Key = h.MoveOverlay, Action = "Move the overlay (drag, press again to lock)" },
+            new { Key = h.QuickScan, Action = "Scan now" },
+            new { Key = h.PauseOcr, Action = "Scanning on / off" },
+            new { Key = h.Calibration, Action = "Calibrate the search area" },
+            new { Key = h.DebugWindow, Action = "Debug window" },
+            new { Key = h.CycleContext, Action = "Location: Auto / Space / Surface" },
+        }.Where(k => !string.IsNullOrWhiteSpace(k.Key)).ToList();
         _loading = false;
     }
 
