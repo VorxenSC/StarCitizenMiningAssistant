@@ -58,6 +58,21 @@ public sealed class NormalizedRect
         return new PixelRect(x, y, Math.Max(0, w), Math.Max(0, h));
     }
 
+    /// <summary>
+    /// The same rectangle grown around its center to at least <paramref name="minWidth"/> ×
+    /// <paramref name="minHeight"/> (fractions of the screen), kept inside the screen.
+    /// </summary>
+    public NormalizedRect AtLeast(double minWidth, double minHeight)
+    {
+        var w = Math.Min(1, Math.Max(WidthPercent, minWidth));
+        var h = Math.Min(1, Math.Max(HeightPercent, minHeight));
+        var cx = XPercent + WidthPercent / 2;
+        var cy = YPercent + HeightPercent / 2;
+        var x = Math.Clamp(cx - w / 2, 0, 1 - w);
+        var y = Math.Clamp(cy - h / 2, 0, 1 - h);
+        return new NormalizedRect(x, y, w, h);
+    }
+
     public override string ToString() => $"x={XPercent:P2} y={YPercent:P2} w={WidthPercent:P2} h={HeightPercent:P2}";
 }
 

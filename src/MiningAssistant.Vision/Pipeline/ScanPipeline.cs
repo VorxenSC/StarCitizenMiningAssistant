@@ -79,8 +79,8 @@ public sealed class ScanPipeline
     // the few pixels of each digit land on the OCR's grid.
     private static readonly (Variant variant, double zoom)[] PlatePlan =
     {
-        (Variant.PlateGreen, 1.0), (Variant.PlateGreenSoft, 1.0), (Variant.PlateGreen, 1.4),
-        (Variant.PlateWhite, 1.0), (Variant.PlateGreen, 0.7), (Variant.PlateGreenSoft, 1.4), (Variant.PlateBright, 1.0),
+        (Variant.PlateGreen, 1.0), (Variant.PlateGreenSoft, 1.0), (Variant.PlateGreen, 0.8), (Variant.PlateGreen, 1.2),
+        (Variant.PlateWhite, 1.0), (Variant.PlateGreenSoft, 0.8), (Variant.PlateWhite, 0.8), (Variant.PlateBright, 1.0),
     };
 
     /// <summary>
@@ -114,7 +114,7 @@ public sealed class ScanPipeline
         {
             // Only trust the image height as "screen height" for full-frame screenshots.
             var screenHeight = screenshot.Height >= 700 ? screenshot.Height : 0;
-            using var search = region is null ? null : ImageOps.Crop(screenshot, region.ToPixels(screenshot.Width, screenshot.Height));
+            using var search = region is null ? null : ImageOps.Crop(screenshot, _settings.SearchArea(region).ToPixels(screenshot.Width, screenshot.Height));
             var located = await AnalyzeSearchAsync(search ?? screenshot, screenHeight, keepDebugImage, ct).ConfigureAwait(false);
             if (located.Plate is not null) return located;
         }

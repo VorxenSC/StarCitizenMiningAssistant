@@ -38,6 +38,16 @@ public sealed class OcrSettings
     /// backgrounds no longer matter. Off = read the whole RS region as text (legacy fixed-area mode).
     /// </summary>
     public bool AutoLocate { get; set; } = true;
+    /// <summary>
+    /// With auto-locate, the RS region is grown to at least this fraction of the screen (around its
+    /// center): a box drawn tight around the number loses the plate as soon as the HUD sways.
+    /// </summary>
+    public double MinSearchWidth { get; set; } = 0.30;
+    public double MinSearchHeight { get; set; } = 0.30;
+
+    /// <summary>The area actually searched for the RS plate.</summary>
+    public Roi.NormalizedRect SearchArea(Roi.NormalizedRect region) =>
+        AutoLocate ? region.AtLeast(MinSearchWidth, MinSearchHeight) : region;
     /// <summary>Skip OCR when the ROI contains no HUD text at all (saves CPU while nothing is scanned).</summary>
     public bool SkipEmptyRoi { get; set; } = true;
     public NumberNormalizerOptions Normalizer { get; set; } = new();

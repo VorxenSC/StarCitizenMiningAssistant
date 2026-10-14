@@ -52,6 +52,15 @@ public class SignalResolverTests
         Assert.Equal(MatchStatus.Ambiguous, In(ScanContext.Surface).Match(rs).Status);
 
     [Fact]
+    public void Large_ground_deposit_fields_resolve_on_the_surface()
+    {
+        // Seen on Daymar: RS 51,000 = 17 FPS (hand-mining) deposits.
+        var r = In(ScanContext.Surface).Match(51000);
+        Assert.True(r.IsMatch, r.Status.ToString());
+        Assert.Equal(("FPS Deposit", 17, false), (r.Best!.Material.Name, r.Best.RockCount, r.Best.IsMixed));
+    }
+
+    [Fact]
     public void Context_rules_out_impossible_signals()
     {
         Assert.Equal(MatchStatus.Unknown, In(ScanContext.Surface).Match(4870).Status); // no asteroids on the ground

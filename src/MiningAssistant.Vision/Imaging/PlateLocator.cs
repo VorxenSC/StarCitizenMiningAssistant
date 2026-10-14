@@ -25,7 +25,7 @@ public sealed class PlateLocatorOptions
     public int ScreenHeight { get; set; }
 
     /// <summary>Minimum contrast (green channel) between plate background and digits.</summary>
-    public int MinDigitContrast { get; set; } = 70;
+    public int MinDigitContrast { get; set; } = 55; // ≈190 over space, ≈130 over Daymar sand; amber HUD text is rejected by color
 
     /// <summary>Diagnostics: receives one line per icon-shaped blob explaining why it was accepted or rejected.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
@@ -277,7 +277,9 @@ public static class PlateLocator
         var red = sr / (double)sg;
         why = $"gap {gapToIcon / (double)ih:F2}h width {textWidth / (double)ih:F2}h digitH {dh / (double)ih:F2}h B/G {blue:F2} R/G {red:F2} contrast {hi - lo}";
         if (dh < 0.3 * ih || dh > 0.85 * ih) { why += " [digit height]"; return null; } // digits are ~half the icon height
-        if (blue < 0.45 || red < 0.40) { why += " [not white]"; return null; } // amber/cyan neighbours are not white digits
+        // Digits are white (measured R/G 0.78–0.88, B/G 0.76–0.87, also over bright ground). Amber HUD text
+        // like "5.0km" has R/G ≈ 1.3 and B/G ≈ 0.45; cyan scan dots have low R/G.
+        if (blue < 0.55 || red < 0.60 || red > 1.15) { why += " [not white]"; return null; }
         why += " OK";
 
         // Tight box: 1 px around the digit rows/columns only. Anything further out (an asteroid above

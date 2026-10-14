@@ -27,8 +27,17 @@ public enum MixedClusterMode
 
 public sealed class SignatureMatcherOptions
 {
-    /// <summary>Largest count per component and in total (RS = baseRS × count).</summary>
+    /// <summary>Largest rock / asteroid count per component and in total (RS = baseRS × count).</summary>
     public int MaxRockCount { get; set; } = 12;
+
+    /// <summary>
+    /// Largest count for ground deposits and salvage panels, which come in big groups (a Daymar field
+    /// showed RS 51,000 = 17 FPS deposits). Applies to homogeneous clusters only.
+    /// </summary>
+    public int MaxDepositCount { get; set; } = 40;
+
+    public int MaxCountFor(SignalKind k) =>
+        k is SignalKind.FpsDeposit or SignalKind.RocDeposit or SignalKind.Salvage ? Math.Max(MaxRockCount, MaxDepositCount) : MaxRockCount;
 
     /// <summary>Max |scanned − expected| accepted, in RS units. Ore bases are 15 apart, so keep this below 7.5.</summary>
     public double MaxAbsoluteError { get; set; } = 6;
@@ -172,7 +181,7 @@ public sealed class SignatureMatcher
         foreach (var m in signals)
         {
             var n = (int)Math.Round(scannedRS / (double)m.BaseRS, MidpointRounding.AwayFromZero);
-            if (n < 1 || n > o.MaxRockCount) continue;
+            if (n < 1 || n > o.MaxCountFor(m.Kind)) continue;
             var expected = m.BaseRS * n;
             var err = Math.Abs(scannedRS - expected);
             if (err > o.MaxAbsoluteError) continue;

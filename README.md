@@ -42,36 +42,71 @@ Overlay para Windows que **lê a tela** durante a mineração com Prospector/MOL
 ## Instalação
 
 ### Requisitos
-- Windows 10 2004+ / Windows 11
-- [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (para rodar) ou .NET 8 SDK (para compilar)
-- Pacote OCR de inglês do Windows (normalmente já instalado — veja abaixo)
+- Windows 10 2004+ / Windows 11, x64
+- Resolução do jogo de **1080p ou maior** (abaixo disso os dígitos ficam pequenos demais para ler com confiança)
 - Star Citizen em **Borderless Windowed** ou **Fullscreen Windowed**
+- Pacote OCR de inglês do Windows (normalmente já instalado; veja abaixo)
+- Só para a versão `publish\`: [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0). A versão `dist\` não precisa de nada instalado.
 
-### Compilar
+### Gerar os pacotes
+
+```bash
+powershell -ExecutionPolicy Bypass -File publish.ps1
+```
+
+| Saída | Para quê |
+|---|---|
+| `publish\MiningAssistant.exe` | uso neste PC (pequeno; precisa do .NET 8 Desktop Runtime) |
+| `dist\MiningAssistant\MiningAssistant.exe` | autocontido: roda em qualquer Windows 10/11 x64 sem instalar nada |
+| `dist\MiningAssistant.zip` | a pasta acima zipada, sem configurações locais, para copiar para **outro computador** |
+
+### Em outro computador
+
+1. Descompacte `MiningAssistant.zip` em qualquer pasta e abra `MiningAssistant.exe`. O painel de controle abre na hora.
+2. Se algo não funcionar, use **Advanced settings → Run self-test** (ou rode `MiningAssistant.exe --selftest`). O relatório `config\selftest.txt` testa pastas, banco de dados, monitores (mínimo 1080p), captura de tela e OCR, e diz o que falta.
+3. Abrir o `.exe` de novo com o app já rodando traz o painel para a frente; antes, parecia que "nada acontecia".
+4. Erros de inicialização aparecem numa mensagem e ficam em `config\crash.log`.
+
+### Compilar e testar
 
 ```bash
 dotnet build -c Release
-```
-
-### Gerar uma pasta portátil
-
-```bash
-dotnet publish src/MiningAssistant.App -c Release -r win-x64 --self-contained false -o publish
-```
-
-Rode `publish\MiningAssistant.exe`. O app aparece na **bandeja do sistema** (ícone genérico de aplicativo perto do relógio, tooltip "Star Citizen Mining Assistant"): duplo clique abre Settings; botão direito mostra o menu.
-
-### Testes
-
-```bash
 dotnet test
 ```
 
 ---
 
+## Painel de controle
+
+O painel abre junto com o app (também pela bandeja ou abrindo o `.exe` de novo):
+
+- **▶ START / ■ STOP**: START faz uma **contagem regressiva de 5 a 1** no centro da tela, com o aviso para trocar para a janela do Star Citizen, e só então começa a ler a tela. Clicar durante a contagem cancela. Quando a leitura começa, o painel minimiza sozinho, porque ele abre exatamente onde o código RS aparece.
+- **⟳ Reload**: relê `settings.json`, a calibração e `materials.json` do disco e recria scanner, OCR, atalhos e overlay, sem fechar o app.
+- **Restart app**: fecha e abre o app de novo.
+- **Funções (ON/OFF)**: overlay, localização automática da placa, atalhos, alertas sonoros, só alvos, salvar capturas ilegíveis, modo debug, esconder overlay de gravações, abrir o painel ao iniciar, iniciar sem contagem, minimizar o painel ao iniciar.
+- **Ao vivo**: miniatura do que o app está capturando, com a placa encontrada contornada em verde, a leitura atual, o valor estável e o resultado.
+- **Checklist**: OCR, banco, área de busca, resolução, captura, atalhos e se alguma janela do app está cobrindo a área de busca, com ✓/✗ e o motivo.
+- **Advanced settings**: versão do banco, monitor, contexto, intervalo, tolerância, votação, alvos, posição do overlay, pastas e o autoteste.
+
+---
+
+## Como o código RS é encontrado e lido
+
+O indicador RS do Star Citizen é uma **placa âmbar com um ícone de pin e o número em branco** (ex. `📍 15,420`), logo acima do retículo central. Ele **balança** com o movimento da nave, então o app não depende de uma posição fixa:
+
+1. Captura a **área de busca** (padrão: o terço central da tela).
+2. **Localiza o ícone de pin**: pixels claros com pouco azul (o ícone e as franjas vermelha/verde da aberração cromática do HUD), com o tamanho certo para a resolução (≈1,6% da altura da tela) e a **silhueta de pin** (anel em cima, cintura estreita, base larga).
+3. Confere que, à direita do ícone e a ≈0,3× a altura dele, há **dígitos brancos** com a altura e largura esperadas. Texto âmbar do HUD (ex. "5.0km") e pontos ciano do scanner são rejeitados pela cor.
+4. Rejeita placas **cortadas pela borda**: melhor não ler do que ler meio número.
+5. Lê **só os dígitos**, pelo canal verde (o único sem deslocamento de aberração cromática), apagando o que aparece através da placa semitransparente (asteroides, pontos do scanner, chão claro), e amplia os dígitos para ≈50 px de altura, o tamanho que o OCR do Windows lê melhor.
+
+Se a área calibrada for pequena demais, ela é ampliada automaticamente para pelo menos 30% × 30% da tela em volta do mesmo centro (`ocr.minSearchWidth/minSearchHeight`).
+
+Casos reais que já falharam viraram testes de regressão: `test_images/live` (asteroide encostado na placa, pontos do scanner atrás dela, chão claro de Daymar) e `test_images/negatives` (o "5.0km" que já foi confundido com a placa).
+
 ## Configurar o OCR
 
-O app usa o OCR embutido do Windows (`Windows.Media.Ocr`) — rápido, local, sem downloads extras. Ele precisa do componente OCR de um idioma. Para verificar:
+O app usa o OCR embutido do Windows (`Windows.Media.Ocr`): rápido, local, sem downloads extras. Ele precisa do componente OCR de um idioma. Para verificar:
 
 ```bash
 dotnet run --project src/MiningAssistant.Cli -- ocr-langs
@@ -83,72 +118,51 @@ Se `en-US` não aparecer, instale (PowerShell **como administrador**):
 Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"
 ```
 
-Se o idioma configurado não existir, o app usa automaticamente os idiomas do seu perfil (pt-BR também lê números). O idioma fica em `config/settings.json` → `ocr.language`.
-
-Outras opções em `ocr`:
-- `upscale` (padrão 4): amplia a ROI antes do OCR. O número do RS tem ~13 px de altura em 1440p; 4× leu 10/10 screenshots reais (3× trocou 5↔6 às vezes).
-- `preprocess`: `Auto` (padrão) tenta, nesta ordem, até um minério bater ou duas leituras concordarem:
-  - `WhiteText` — canal azul: dígitos claros sobre a placa âmbar; ícone e placa somem;
-  - `Amber` — mín(R,G): texto âmbar/amarelo sobre o espaço azul-petróleo;
-  - `Grayscale` e `Binarize` — genéricos; e por último uma tentativa em escala alternativa.
-
-  Detalhe do HUD do Star Citizen: há **aberração cromática** (cada canal RGB deslocado ~1 px) e a fonte é negrito condensada com vãos de 1–2 px. Por isso não se usa limiar rígido nas variantes principais — ele fecha os "0".
-- O texto é **recortado automaticamente** dentro da ROI antes de ampliar: a ROI pode ter folga sem custo extra (leituras típicas de 7–25 ms).
-- `normalizer.maxSubstitutions` (padrão 2): quantas letras confundíveis (S→5, B→8, O→0, I/l→1, Z→2) podem ser corrigidas por número.
+Se o idioma configurado não existir, o app usa os idiomas do seu perfil (pt-BR também lê números). O idioma fica em `config/settings.json` → `ocr.language`.
 
 ---
 
-## Calibrar a ROI
+## Área de busca (calibração)
 
-**Preset incluído:** no Star Citizen o código RS (ícone âmbar + número, ex. `📍 15,420`) aparece logo acima do retículo redondo central. O app já vem com esse preset (`data/profiles/star-citizen-center.roi.json`, medido em 3440×1440) e o usa enquanto você não calibrar. Se não funcionar na sua resolução/FOV, calibre:
+O app já vem com uma área de busca pronta (`data/profiles/star-citizen-center.roi.json`: o terço central da tela) e na maioria dos casos **não precisa calibrar**. Para mudar: **Calibrate search area…** no painel (ou `Ctrl+Shift+C`), escolha *RS search area* e desenhe uma caixa **grande** em volta de onde o código aparece. Quanto maior, mais tolerante ao balanço do HUD. **Enter** salva, **Esc** cancela.
 
-1. Abra o Star Citizen e deixe um RS visível na tela (faça um scan).
-2. Pressione **Ctrl+Shift+C** (ou Settings → *Calibrate ROI…*). A tela congela com um screenshot.
-3. Selecione **RS Signature** e **arraste um retângulo** sobre a área onde o número do RS aparece. Deixe uma margem — não precisa ser justo; o app prefere números que batem com minérios conhecidos.
-4. (Opcional) desenhe *Scan Details*, *Mass*, *Resistance*, *Instability*, *Composition* — já ficam salvos para o modo detalhado futuro.
-5. **Enter** salva, **Esc** cancela. Use *Move toolbar ⇅* se a barra estiver em cima da área.
-
-As regiões são salvas como **porcentagem do monitor** (`config/profiles/default.roi.json`), então o mesmo perfil se adapta aproximadamente a outras resoluções. Se você trocar a resolução/HUD, recalibre para melhor precisão.
-
-**Monitor:** escolha o monitor do jogo em Settings → *Game monitor*. O app é *Per-Monitor DPI aware*: funciona com escala do Windows 100/125/150% e em ultrawide (testado em 3440×1440).
-
-> Dica: se o número do RS aparecer em posições diferentes (por exemplo acompanhando o marcador da rocha), desenhe uma ROI maior ao redor do centro da mira. Custa alguns ms a mais de OCR mas continua leve.
+As regiões ficam salvas como porcentagem do monitor (`config/profiles/default.roi.json`), então se adaptam a outras resoluções. Escolha o monitor do jogo em *Advanced settings → Game monitor*.
 
 ---
 
 ## Usando
 
-| Hotkey | Ação |
+| Atalho | Ação |
 |---|---|
-| **Ctrl+Shift+M** | mostrar/esconder overlay |
-| **Ctrl+Shift+S** | quick scan (zera votos e escaneia agora) |
-| **Ctrl+Shift+C** | calibração |
-| **Ctrl+Shift+P** | pausar/retomar OCR |
-| **Ctrl+Shift+U** | salvar assinatura desconhecida |
+| **[** | mostrar/esconder overlay |
+| **]** | salvar a captura atual para análise |
+| **\\** | mover o overlay: arraste o cartão e aperte de novo (ou duplo clique) para travar |
+| **Ctrl+Shift+S** | escanear agora |
+| **Ctrl+Shift+P** | ligar/desligar a leitura (sem contagem) |
+| **Ctrl+Shift+C** | calibrar a área de busca |
 | **Ctrl+Shift+D** | janela de debug |
-| **Ctrl+Shift+X** | alternar contexto de scan (Auto → Space → Surface) |
-| **Ctrl+Shift+O** | mover o overlay: arraste o cartão; aperte de novo ou dê duplo clique para travar |
+| **Ctrl+Shift+X** | contexto Auto → Space → Surface |
 
-**Mover o overlay:** aperte `Ctrl+Shift+O` (ou Settings → *Move overlay*, ou o menu da bandeja). O cartão ganha borda amarela e fica clicável. Libere o mouse do jogo (ex.: `Alt+Tab`), arraste para onde quiser e trave com `Ctrl+Shift+O` ou duplo clique. A posição fica salva (modo manual). Fora do modo mover, o overlay continua transparente ao clique e nunca rouba o foco do jogo. Para voltar a colá-lo no indicador RS, marque "Place next to the RS indicator" em Settings.
+Os atalhos são só "ouvidos" (Raw Input passivo), nunca bloqueados, então o jogo também recebe as teclas. `[`, `]` e `\` são reconhecidos pelo caractere (funcionam em teclado ABNT2 e US). Se o contador "keys received" do painel não subir com o jogo em foco, o jogo está rodando como administrador: tire o modo administrador do RSI Launcher. Edite os atalhos em `config/settings.json` → `hotkeys` e clique **Reload**.
 
-**Leituras perdidas:** se o indicador RS aparece mas não é lido, ou se surge um RS desconhecido, o app salva o recorte (só a pequena área do RS) em `diagnostics/missed/`: no máximo 1 a cada 3 s e até 300 arquivos, sem nada sair do PC. Desligue com `saveMissedReads: false`. Mande essa pasta para melhorarmos o reconhecimento.
+**Mover o overlay:** aperte `\` (ou *Move overlay* no painel/bandeja), libere o mouse do jogo (`Alt+Tab`), arraste o cartão e aperte `\` de novo. A posição fica salva.
 
-Hotkeys são editáveis em `config/settings.json` → `hotkeys` (formato `"Ctrl+Alt+F9"`). Se alguma estiver em uso por outro programa, isso é registrado em `config/app.log`.
+**Leituras perdidas:** se a placa RS é encontrada mas não lida, ou surge um RS desconhecido, o app salva o recorte da placa em `diagnostics/missed/` (no máximo 1 a cada 3 s, até 300 arquivos; nada sai do PC). Se você vê o código mas o overlay não reage, aperte **]**: a área de busca inteira é salva em `unknown_signatures/`. Mande essas pastas para melhorar o reconhecimento.
 
 ### O que o overlay mostra
 
 | Situação | Overlay |
 |---|---|
-| Nada detectado | pílula quase invisível "⛏ scanning" |
+| Nada detectado | nada (ou a pílula "⛏ scanning", se ligada) |
 | RS exato | **GOLD** · RS 3,585 · 1 ROCK · ★★ VERY HIGH PRIORITY |
 | RS próximo (ex.: 3584) | **GOLD** · … · Confidence 97% |
 | Dois candidatos parecidos | **⚠ POSSIBLE:** GOLD ×6 · ICE ×5 com as porcentagens |
-| RS desconhecido | **? UNKNOWN** · RS 5,000 · "Save with Ctrl+Shift+U" |
+| RS desconhecido | **? UNKNOWN** · RS 5,001 |
 | Filtro de alvos ligado e achou | faixa **◎ TARGET FOUND** |
 
-Cores por prioridade (verde = very high, ciano = high, amarelo = conditional, cinza = common, laranja = ambíguo, roxo = desconhecido) **sempre acompanhadas de texto e ícones** (★★ ★ ◆ · ⚠ ?).
+Cores por prioridade (verde = very high, ciano = high, amarelo = conditional, cinza = common, laranja = ambíguo, roxo = desconhecido), **sempre acompanhadas de texto e ícones** (★★ ★ ◆ · ⚠ ?).
 
-Depois que o RS some da tela o último resultado fica visível por `holdSeconds` (4 s) marcado como "last seen".
+Depois que o RS some da tela, o último resultado fica visível por `holdSeconds` (4 s), marcado como "last seen".
 
 ### Tipos de sinal e contexto de scan
 

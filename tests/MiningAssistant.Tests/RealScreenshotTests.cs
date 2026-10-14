@@ -76,6 +76,32 @@ public class RealScreenshotTests
         }
     }
 
+    /// <summary>
+    /// test_images/negatives: real captures the locator once mistook for the RS plate (Daymar: the amber
+    /// "5.0km" scanner-range text over bright ground). They must never be accepted again.
+    /// </summary>
+    [Fact]
+    public void Locator_never_accepts_known_false_positives()
+    {
+        var files = Directory.GetFiles(Dir("negatives"), "*.png");
+        Assert.NotEmpty(files);
+        foreach (var file in files)
+        {
+            using var bmp = new Bitmap(file);
+            Assert.True(PlateLocator.Find(bmp).Count == 0, Path.GetFileName(file));
+        }
+    }
+
+    [Fact]
+    public void Tight_calibration_is_grown_to_a_usable_search_area()
+    {
+        var tight = new NormalizedRect(0.4782, 0.3049, 0.0401, 0.0486); // what was calibrated on Daymar
+        var area = new AppSettings().Ocr.SearchArea(tight);
+        Assert.True(area.WidthPercent >= 0.30 && area.HeightPercent >= 0.30);
+        Assert.Equal(tight.XPercent + tight.WidthPercent / 2, area.XPercent + area.WidthPercent / 2, 3); // same center
+        Assert.Equal(tight.YPercent + tight.HeightPercent / 2, area.YPercent + area.HeightPercent / 2, 3);
+    }
+
     [Fact]
     public void Locator_rejects_a_plate_cut_by_the_edge_instead_of_reading_half_a_number()
     {

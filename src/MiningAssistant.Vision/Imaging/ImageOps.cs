@@ -86,8 +86,11 @@ public static class ImageOps
         return FromGrayBytes(Pad(gray, w, h, pad, 255, out var pw, out var ph), pw, ph);
     }
 
-    /// <summary>Icon height the digits are scaled to before OCR (digits end up ≈ 55 px tall).</summary>
-    public const double PlateTargetIconHeight = 100;
+    /// <summary>
+    /// Height the digit crop is scaled to before OCR. Windows OCR reads these digits best at ≈45–60 px;
+    /// above ≈70 px it starts returning nothing (measured on a Daymar capture: clean 72 px digits → "").
+    /// </summary>
+    public const double PlateTargetDigitHeight = 56;
 
     /// <summary>
     /// Prepares the digits of a located RS plate for OCR. The crop holds only the digits (no icon, no
@@ -102,7 +105,7 @@ public static class ImageOps
             Variant.PlateBright => Channel.Max,
             _ => Channel.Green,
         };
-        var factor = Math.Clamp(PlateTargetIconHeight * zoom / plate.IconHeight, 2, 12);
+        var factor = Math.Clamp(PlateTargetDigitHeight * zoom / plate.Digits.Height, 1.5, 10);
 
         using var crop = Crop(search, plate.Digits);
         using var scaled = new Bitmap((int)Math.Round(crop.Width * factor), (int)Math.Round(crop.Height * factor), PixelFormat.Format32bppArgb);

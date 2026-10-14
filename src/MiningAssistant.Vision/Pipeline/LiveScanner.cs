@@ -157,7 +157,7 @@ public sealed class LiveScanner : IDisposable
                 total.Elapsed, 0, "No RS region calibrated — open Calibration (Ctrl+Shift+C).");
 
         var monitor = Monitors.Get(config.Settings.MonitorIndex);
-        var rect = monitor.ToScreen(region.ToPixels(monitor.Width, monitor.Height));
+        var rect = monitor.ToScreen(config.Settings.Ocr.SearchArea(region).ToPixels(monitor.Width, monitor.Height));
 
         var capSw = Stopwatch.StartNew();
         var roi = _capture.Capture(rect);
