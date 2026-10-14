@@ -292,7 +292,9 @@ public sealed partial class AppHost
                   (_hotkeys.KeysReceived == 0 ? " (press any key; if it stays 0 inside the game, the game is running as administrator)" : "")),
         };
 
-        // Our own windows sit in the middle of the screen by default — exactly where the RS plate appears.
+        health.Add(ContributionHealth());
+
+        // Last item: our own windows sit in the middle of the screen by default — exactly where the RS plate appears.
         if (region is not null)
         {
             var area = mon.ToScreen(Settings.Ocr.SearchArea(region).ToPixels(mon.Width, mon.Height));
@@ -309,7 +311,6 @@ public sealed partial class AppHost
                 ? new(true, "Search area", "this panel is over the middle of the screen — while it is open in front of the game, the app reads the panel instead of the RS code. Minimize it or drag it aside while you mine.", Notice: true)
                 : new(true, "Search area", covering ? "clear when you click START (this panel minimizes itself)" : "nothing is covering it"));
         }
-        health.Add(ContributionHealth());
 
         // What the scanner sees right now.
         var live = new List<LiveRow>();
