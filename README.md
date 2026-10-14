@@ -148,19 +148,19 @@ As regiões ficam salvas como porcentagem do monitor (`config/profiles/default.r
 | Atalho | Ação |
 |---|---|
 | **Page Up** | mostrar/esconder overlay |
-| **Page Down** | **snapshot de depuração** deste instante (pasta `debug_snapshots\`) |
-| **\\** | mover o overlay: arraste o cartão e aperte de novo (ou duplo clique) para travar |
+| **Page Down** | mover o overlay: arraste o cartão e aperte de novo (ou duplo clique) para travar |
+| **\\** | **snapshot de depuração** deste instante (pasta `debug_snapshots\`) |
 | **Ctrl+Shift+S** | escanear agora |
 | **Ctrl+Shift+P** | ligar/desligar a leitura (sem contagem) |
 | **Ctrl+Shift+C** | calibrar a área de busca |
 | **Ctrl+Shift+D** | janela de debug |
 | **Ctrl+Shift+X** | contexto Auto → Space → Surface |
 
-Os atalhos são só "ouvidos" (Raw Input passivo), nunca bloqueados, então o jogo também recebe as teclas. `\` é reconhecido pelo caractere (funciona em teclado ABNT2 e US). Até a v0.1.4 os padrões eram `[` e `]`, que o Star Citizen usa para aceitar/recusar missões; configurações antigas com esses padrões passam sozinhas para Page Up / Page Down. Se o contador "keys received" do painel não subir com o jogo em foco, o jogo está rodando como administrador: tire o modo administrador do RSI Launcher. Edite os atalhos em `config/settings.json` → `hotkeys` e clique **Reload**.
+Os atalhos são só "ouvidos" (Raw Input passivo), nunca bloqueados, então o jogo também recebe as teclas. `\` é reconhecido pelo caractere (funciona em teclado ABNT2 e US). Até a v0.1.4 os padrões eram `[` e `]`, que o Star Citizen usa para aceitar/recusar missões; configurações antigas com os padrões passam sozinhas para Page Up (overlay), Page Down (mover) e `\` (snapshot). Se o contador "keys received" do painel não subir com o jogo em foco, o jogo está rodando como administrador: tire o modo administrador do RSI Launcher. Edite os atalhos em `config/settings.json` → `hotkeys` e clique **Reload**.
 
-**Mover o overlay:** aperte `\` (ou *Move overlay* no painel/bandeja), libere o mouse do jogo (`Alt+Tab`), arraste o cartão e aperte `\` de novo. A posição fica salva.
+**Mover o overlay:** aperte **Page Down** (ou *Move overlay* no painel/bandeja), libere o mouse do jogo (`Alt+Tab`), arraste o cartão e aperte **Page Down** de novo. A posição fica salva.
 
-**Snapshot de depuração (Page Down):** numa situação em que a leitura falha (ou dá errado), aperte **Page Down** (ou *📸 Debug snapshot* no painel, na janela de debug ou na bandeja). Na hora, o app grava uma pasta `debug_snapshots\AAAAMMDD_HHMMSS_mmm\` com:
+**Snapshot de depuração (`\`):** numa situação em que a leitura falha (ou dá errado), aperte **\\** (ou *📸 Debug snapshot* no painel, na janela de debug ou na bandeja). Na hora, o app grava uma pasta `debug_snapshots\AAAAMMDD_HHMMSS_mmm\` com:
 
 | Arquivo | Conteúdo |
 |---|---|

@@ -123,8 +123,8 @@ public partial class SettingsWindow : Window
         HotkeyList.ItemsSource = new[]
         {
             new { Key = h.ToggleOverlay, Action = "Show / hide the overlay" },
-            new { Key = h.DebugSnapshot, Action = "Debug snapshot of this moment" },
             new { Key = h.MoveOverlay, Action = "Move the overlay (drag, press again to lock)" },
+            new { Key = h.DebugSnapshot, Action = "Debug snapshot of this moment" },
             new { Key = h.QuickScan, Action = "Scan now" },
             new { Key = h.PauseOcr, Action = "Scanning on / off" },
             new { Key = h.Calibration, Action = "Calibrate the search area" },

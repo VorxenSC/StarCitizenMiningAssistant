@@ -103,12 +103,12 @@ public sealed class OverlaySettings
 public sealed class HotkeySettings
 {
     // In-game keys. "[" and "]" were the defaults until v0.1.4, but Star Citizen uses them to accept /
-    // decline missions, so they moved to Page Up / Page Down (see AppSettings.Migrate).
+    // decline missions (see AppSettings.Migrate for how older settings are upgraded).
     public string ToggleOverlay { get; set; } = "PageUp";
-    /// <summary>Saves a full debug snapshot of this moment (screen, plate, OCR inputs, report) into debug_snapshots/.</summary>
-    public string DebugSnapshot { get; set; } = "PageDown";
     /// <summary>Toggles overlay move mode (drag it anywhere, press again or double-click to lock).</summary>
-    public string MoveOverlay { get; set; } = "\\";
+    public string MoveOverlay { get; set; } = "PageDown";
+    /// <summary>Saves a full debug snapshot of this moment (screen, plate, OCR inputs, report) into debug_snapshots/.</summary>
+    public string DebugSnapshot { get; set; } = "\\";
 
     // Desktop / secondary actions.
     public string QuickScan { get; set; } = "Ctrl+Shift+S";
@@ -123,19 +123,27 @@ public sealed class AppSettings
 {
     /// <summary>Settings format; older files are upgraded once by <see cref="Migrate"/>.</summary>
     public int ConfigVersion { get; set; }
-    public const int CurrentConfigVersion = 1;
+    public const int CurrentConfigVersion = 2;
 
     /// <summary>
     /// Upgrades settings saved by an older version. Returns true when something changed (save the file).
-    /// v1: the overlay / snapshot hotkeys "[" and "]" collide with accepting / declining missions in
-    /// Star Citizen; if they are still the old defaults they become Page Up / Page Down. Keys the user
-    /// chose are left alone.
+    /// Keys the user chose are left alone; only keys still at an old default change.
+    ///   v1 (v0.1.5): "[" and "]" collide with accepting / declining missions in Star Citizen →
+    ///                overlay Page Up, snapshot Page Down.
+    ///   v2 (v0.1.6): Page Down moves the overlay and "\" takes the snapshot (swapped only while both
+    ///                are still the v1 defaults, so two actions never end up on the same key).
     /// </summary>
     public bool Migrate()
     {
         if (ConfigVersion >= CurrentConfigVersion) return false;
-        if (Hotkeys.ToggleOverlay == "[") Hotkeys.ToggleOverlay = "PageUp";
-        if (Hotkeys.DebugSnapshot == "]") Hotkeys.DebugSnapshot = "PageDown";
+        var h = Hotkeys;
+        if (ConfigVersion < 1)
+        {
+            if (h.ToggleOverlay == "[") h.ToggleOverlay = "PageUp";
+            if (h.DebugSnapshot == "]") h.DebugSnapshot = "PageDown";
+        }
+        if (ConfigVersion < 2 && h.DebugSnapshot == "PageDown" && h.MoveOverlay == "\\")
+            (h.DebugSnapshot, h.MoveOverlay) = ("\\", "PageDown");
         ConfigVersion = CurrentConfigVersion;
         return true;
     }
