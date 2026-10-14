@@ -104,7 +104,8 @@ public sealed class HotkeySettings
 {
     // In-game keys: unused by Star Citizen.
     public string ToggleOverlay { get; set; } = "[";
-    public string SaveUnknown { get; set; } = "]";
+    /// <summary>Saves a full debug snapshot of this moment (screen, plate, OCR inputs, report) into debug_snapshots/.</summary>
+    public string DebugSnapshot { get; set; } = "]";
     /// <summary>Toggles overlay move mode (drag it anywhere, press again or double-click to lock).</summary>
     public string MoveOverlay { get; set; } = "\\";
 

@@ -77,11 +77,27 @@ public sealed class ScanPipeline
     // Tried in order until one gives a clean, simply-explained value (usually the first, in a few ms).
     // The extra zoom levels only run on hard frames: small HUDs (1080p and below) are sensitive to how
     // the few pixels of each digit land on the OCR's grid.
-    private static readonly (Variant variant, double zoom)[] PlatePlan =
+    public static readonly IReadOnlyList<(Variant variant, double zoom)> PlatePlan = new (Variant, double)[]
     {
         (Variant.PlateGreen, 1.0), (Variant.PlateGreenSoft, 1.0), (Variant.PlateGreen, 0.8), (Variant.PlateGreen, 1.2),
         (Variant.PlateWhite, 1.0), (Variant.PlateGreenSoft, 0.8), (Variant.PlateWhite, 0.8), (Variant.PlateBright, 1.0),
     };
+
+    /// <summary>One OCR attempt on a located plate, kept for diagnostics (caller disposes <see cref="Image"/>).</summary>
+    public sealed record PlateRead(Variant Variant, double Zoom, string Text, int? Value, Bitmap Image);
+
+    /// <summary>Runs every attempt of <see cref="PlatePlan"/> (no early stop) — for debug snapshots.</summary>
+    public async Task<IReadOnlyList<PlateRead>> ReadAllPlateVariantsAsync(Bitmap search, Plate plate, CancellationToken ct = default)
+    {
+        var reads = new List<PlateRead>();
+        foreach (var (variant, zoom) in PlatePlan)
+        {
+            var img = ImageOps.PrepareDigits(search, plate, variant, zoom);
+            var text = (await _ocr.RecognizeAsync(img, ct).ConfigureAwait(false)).Text;
+            reads.Add(new PlateRead(variant, zoom, text, _extractor.Extract(text).RS, img));
+        }
+        return reads;
+    }
 
     /// <summary>
     /// Auto-locate path: finds the amber RS plate anywhere in <paramref name="search"/> and reads only

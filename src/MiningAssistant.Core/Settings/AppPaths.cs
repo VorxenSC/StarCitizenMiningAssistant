@@ -16,7 +16,8 @@ public sealed class AppPaths
     public string ConfigRoot => Path.Combine(Root, "config");
     public string SettingsFile => Path.Combine(ConfigRoot, "settings.json");
     public string ProfilesRoot => Path.Combine(ConfigRoot, "profiles");
-    public string UnknownRoot => Path.Combine(Root, "unknown_signatures");
+    /// <summary>Debug snapshots taken with the "]" key, one folder per snapshot.</summary>
+    public string DebugSnapshotsRoot => Path.Combine(Root, "debug_snapshots");
     public string MissedReadsRoot => Path.Combine(Root, "diagnostics", "missed");
 
     public AppPaths(string? root = null) => Root = root ?? AppContext.BaseDirectory;

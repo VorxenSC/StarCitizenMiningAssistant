@@ -172,6 +172,24 @@ switch (cliArgs[0].ToLowerInvariant())
         return 0;
     }
 
+    case "snapshot":
+    {
+        // Re-runs the debug-snapshot analysis on a full-screen image (e.g. a snapshot's 1_screen.png).
+        var ocr = WindowsOcrEngine.TryCreate(settings.Ocr.Language, out var ocrInfo) ?? throw new InvalidOperationException(ocrInfo);
+        var outRoot = dumpDir ?? Path.Combine(FindRepoRoot() ?? ".", ".scratch", "snapshots");
+        foreach (var file in ExpandImages(cliArgs[1]).Where(f => Path.GetFileName(f) is not ("2_search_area.png" or "2_search_area_marked.png" or "3_plate.png") && !Path.GetFileName(f).StartsWith("4_ocr_")))
+        {
+            using var screen = new Bitmap(file);
+            var profile = profilePath is not null ? Json.Deserialize<RoiProfile>(File.ReadAllText(profilePath)) : paths.LoadProfile("default");
+            var region = profile.Get(RoiNames.RS) ?? new NormalizedRect(0.30, 0.12, 0.40, 0.46);
+            var mon = new MonitorInfo(0, "file", 0, 0, screen.Width, screen.Height, true);
+            var ctx = new SnapshotContext(mon, settings.Ocr.SearchArea(region).ToPixels(screen.Width, screen.Height), settings, version, null, null, "re-analysis of " + file);
+            var dir = await new DebugSnapshotWriter(outRoot).SaveAsync(screen, ctx, new ScanPipeline(ocr, matcher, settings.Ocr), matcher);
+            Console.WriteLine($"{Path.GetFileName(file)} → {dir}");
+        }
+        return 0;
+    }
+
     case "digits":
     {
         // For each located plate: every preprocessing variant / zoom, the image sent to OCR and what OCR read.
@@ -272,6 +290,7 @@ static int Usage()
           regress [folder]              Regression test: files named *rs<NNNN>*.png must read that RS
           synth [folder]                Generate synthetic HUD-like test images (+ profile.roi.json)
           live [frames]                 Capture the RS region from the game monitor and OCR it (--dump saves crops)
+          snapshot <image|folder>       Re-run the debug-snapshot analysis on full-screen image(s), e.g. a snapshot's 1_screen.png
           ocr-langs                     List installed Windows OCR languages
 
         Options:

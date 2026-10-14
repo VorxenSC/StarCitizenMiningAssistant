@@ -135,7 +135,7 @@ As regiões ficam salvas como porcentagem do monitor (`config/profiles/default.r
 | Atalho | Ação |
 |---|---|
 | **[** | mostrar/esconder overlay |
-| **]** | salvar a captura atual para análise |
+| **]** | **snapshot de depuração** deste instante (pasta `debug_snapshots\`) |
 | **\\** | mover o overlay: arraste o cartão e aperte de novo (ou duplo clique) para travar |
 | **Ctrl+Shift+S** | escanear agora |
 | **Ctrl+Shift+P** | ligar/desligar a leitura (sem contagem) |
@@ -147,7 +147,19 @@ Os atalhos são só "ouvidos" (Raw Input passivo), nunca bloqueados, então o jo
 
 **Mover o overlay:** aperte `\` (ou *Move overlay* no painel/bandeja), libere o mouse do jogo (`Alt+Tab`), arraste o cartão e aperte `\` de novo. A posição fica salva.
 
-**Leituras perdidas:** se a placa RS é encontrada mas não lida, ou surge um RS desconhecido, o app salva o recorte da placa em `diagnostics/missed/` (no máximo 1 a cada 3 s, até 300 arquivos; nada sai do PC). Se você vê o código mas o overlay não reage, aperte **]**: a área de busca inteira é salva em `unknown_signatures/`. Mande essas pastas para melhorar o reconhecimento.
+**Snapshot de depuração (`]`):** numa situação em que a leitura falha (ou dá errado), aperte **]** (ou *📸 Debug snapshot* no painel, na janela de debug ou na bandeja). Na hora, o app grava uma pasta `debug_snapshots\AAAAMMDD_HHMMSS_mmm\` com:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `1_screen.png` | o monitor do jogo inteiro naquele instante |
+| `2_search_area.png` / `2_search_area_marked.png` | a área de busca, e a mesma com o ícone (verde) e os dígitos (vermelho) encontrados |
+| `3_plate.png` | o recorte da placa RS, se encontrada |
+| `4_ocr_NN_*.png` | cada imagem enviada ao OCR |
+| `report.txt` | por que cada candidato foi aceito ou rejeitado, o que o OCR leu em cada imagem, a leitura e o resultado finais, o que o overlay mostrava e as configurações |
+
+Cada snapshot tem ~4 MB e fica só no seu PC. Mande a pasta (ou o `1_screen.png`) para análise. `mining-cli snapshot <1_screen.png>` refaz toda a análise de um snapshot depois de qualquer ajuste no app.
+
+**Leituras perdidas automáticas:** se a placa RS é encontrada mas não lida, ou surge um RS desconhecido, o app também salva sozinho o recorte da placa em `diagnostics/missed/` (no máximo 1 a cada 3 s, até 300 arquivos).
 
 ### O que o overlay mostra
 
