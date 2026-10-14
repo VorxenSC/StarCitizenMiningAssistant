@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(WindowsTfm)</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <!-- Only used for the tray NotifyIcon. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>MiningAssistant</AssemblyName>
+    <RootNamespace>MiningAssistant.App</RootNamespace>
+    <!-- WinForms analyzer; DPI awareness for this WPF app is intentionally set in app.manifest. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Avoid WPF / WinForms / GDI name clashes; those namespaces are imported explicitly where needed. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MiningAssistant.Core\MiningAssistant.Core.csproj" />
+    <ProjectReference Include="..\MiningAssistant.Vision\MiningAssistant.Vision.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\data\**\*" LinkBase="data" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

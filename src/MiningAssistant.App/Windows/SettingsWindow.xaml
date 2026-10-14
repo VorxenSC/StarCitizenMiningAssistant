@@ -1,0 +1,235 @@
+<Window x:Class="MiningAssistant.App.Windows.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Star Citizen Mining Assistant — Control Panel" Width="680" SizeToContent="Height" MaxHeight="940"
+        ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
+        Background="#FF0F172A" Foreground="#FFE2E8F0" FontFamily="Segoe UI" FontSize="13">
+    <Window.Resources>
+        <Style TargetType="TextBlock" x:Key="Label">
+            <Setter Property="Foreground" Value="#FF94A3B8" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,4,10,4" />
+        </Style>
+        <Style TargetType="TextBlock" x:Key="Section">
+            <Setter Property="Foreground" Value="#FF4ADE80" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,14,0,4" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,5" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#FFE2E8F0" />
+            <Setter Property="Margin" Value="0,4,16,4" />
+        </Style>
+
+        <!-- On/off switch -->
+        <Style x:Key="Switch" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#FFE2E8F0" />
+            <Setter Property="Margin" Value="0,5,0,5" />
+            <Setter Property="Width" Value="290" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="Track" Width="40" Height="20" CornerRadius="10" Background="#FF334155" VerticalAlignment="Center">
+                                <Ellipse x:Name="Knob" Width="14" Height="14" Fill="#FF94A3B8" HorizontalAlignment="Left" Margin="3,0" />
+                            </Border>
+                            <TextBlock x:Name="State" Text="OFF" Width="28" Margin="8,0,0,0" FontSize="11" FontWeight="Bold"
+                                       Foreground="#FF94A3B8" VerticalAlignment="Center" />
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="#FF16A34A" />
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Knob" Property="Fill" Value="White" />
+                                <Setter TargetName="State" Property="Text" Value="ON" />
+                                <Setter TargetName="State" Property="Foreground" Value="#FF4ADE80" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16">
+            <!-- Header + overall state -->
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" x:Name="VersionText" Foreground="#FF64748B" FontSize="11" VerticalAlignment="Bottom" />
+                <TextBlock Text="⛏ MINING ASSISTANT" FontSize="18" FontWeight="Bold" Foreground="#FF4ADE80" />
+            </DockPanel>
+            <Border x:Name="StateBar" CornerRadius="6" Padding="12,8" Margin="0,8,0,0" Background="#FF14532D">
+                <DockPanel>
+                    <Ellipse x:Name="StateDot" Width="12" Height="12" Fill="#FF4ADE80" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <TextBlock x:Name="StateText" Text="STARTING…" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+
+            <!-- Main actions -->
+            <WrapPanel Margin="0,10,0,0">
+                <Button x:Name="StartButton" Content="▶  START" FontWeight="Bold" FontSize="15" Padding="22,7" Click="Start_Click"
+                        Background="#FF16A34A" Foreground="White" BorderBrush="#FF15803D"
+                        ToolTip="Starts reading the screen after a 5 s countdown, so you can switch to the game window" />
+                <Button x:Name="ReloadButton" Content="⟳  Reload" FontWeight="SemiBold" Click="Reload_Click"
+                        ToolTip="Re-read settings, calibration and materials from disk and restart the scanner, OCR and hotkeys" />
+                <Button Content="Restart app" Click="Restart_Click" ToolTip="Close and start the app again" />
+                <Button Content="Calibrate search area…" Click="Calibrate_Click" />
+                <Button Content="Move overlay" Click="Move_Click" ToolTip="Drag the result card, then click again (or double-click the card) to lock" />
+                <Button Content="📸 Debug snapshot" Click="Snapshot_Click"
+                        ToolTip="Saves this exact moment (whole screen, RS plate, every OCR input and a report) to debug_snapshots — same as the ] key" />
+                <Button Content="Debug window" Click="Debug_Click" />
+            </WrapPanel>
+
+            <!-- Switches -->
+            <TextBlock Text="FUNCTIONS" Style="{StaticResource Section}" />
+            <WrapPanel>
+                <CheckBox x:Name="OverlaySwitch" Style="{StaticResource Switch}" Content="Overlay (result card)" Click="OverlaySwitch_Click" />
+                <CheckBox x:Name="LocateSwitch" Style="{StaticResource Switch}" Content="Auto-locate the amber RS plate" Click="Feature_Click"
+                          ToolTip="Finds the pin icon + number anywhere in the search area. Off = read a fixed area as text." />
+                <CheckBox x:Name="HotkeySwitch" Style="{StaticResource Switch}" Content="Hotkeys" Click="Feature_Click" />
+                <CheckBox x:Name="SoundSwitch" Style="{StaticResource Switch}" Content="Sound alerts" Click="Feature_Click" />
+                <CheckBox x:Name="TargetSwitch" Style="{StaticResource Switch}" Content="Only announce target materials" Click="Feature_Click" />
+                <CheckBox x:Name="MissedSwitch" Style="{StaticResource Switch}" Content="Save unreadable captures (diagnostics)" Click="Feature_Click" />
+                <CheckBox x:Name="DebugSwitch" Style="{StaticResource Switch}" Content="Debug mode" Click="Feature_Click" />
+                <CheckBox x:Name="CaptureSwitch" Style="{StaticResource Switch}" Content="Hide overlay from recordings / OBS" Click="Feature_Click" />
+                <CheckBox x:Name="StartupSwitch" Style="{StaticResource Switch}" Content="Open this panel when the app starts" Click="Feature_Click" />
+                <CheckBox x:Name="AutoStartSwitch" Style="{StaticResource Switch}" Content="Start scanning automatically (no countdown)" Click="Feature_Click" />
+                <CheckBox x:Name="MinimizeSwitch" Style="{StaticResource Switch}" Content="Minimize this panel when scanning starts" Click="Feature_Click" />
+            </WrapPanel>
+
+            <!-- Live view -->
+            <TextBlock Text="LIVE — WHAT THE APP SEES" Style="{StaticResource Section}" />
+            <Border Background="#FF020617" CornerRadius="6" BorderBrush="#FF334155" BorderThickness="1" Padding="8">
+                <StackPanel>
+                    <Border Background="Black" MinHeight="60" MaxHeight="230">
+                        <Grid>
+                            <Image x:Name="PreviewImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock x:Name="PreviewHint" Text="no capture yet" Foreground="#FF475569" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                    <TextBlock x:Name="LiveText" FontFamily="Cascadia Mono, Consolas" FontSize="12" Margin="2,8,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <!-- Health -->
+            <TextBlock Text="CHECKLIST" Style="{StaticResource Section}" />
+            <ItemsControl x:Name="HealthList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel Margin="0,2">
+                            <TextBlock Text="{Binding Mark}" Foreground="{Binding Color}" FontWeight="Bold" Width="22" />
+                            <TextBlock TextWrapping="Wrap">
+                                <Run Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" />
+                                <Run Text="{Binding Detail, Mode=OneWay}" Foreground="#FF94A3B8" />
+                            </TextBlock>
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Advanced -->
+            <Expander x:Name="AdvancedExpander" Header="Advanced settings" Foreground="#FFE2E8F0" Margin="0,14,0,0">
+                <StackPanel Margin="4,8,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Game version (DB)" Style="{StaticResource Label}" />
+                        <ComboBox x:Name="VersionBox" Grid.Column="1" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Text="Game monitor" Style="{StaticResource Label}" />
+                        <ComboBox x:Name="MonitorBox" Grid.Row="1" Grid.Column="1" Margin="0,3" />
+                        <TextBlock Grid.Row="2" Text="Location context" Style="{StaticResource Label}" />
+                        <ComboBox x:Name="ContextBox" Grid.Row="2" Grid.Column="1" Margin="0,3">
+                            <ComboBoxItem Content="Auto (detected from signals)" Tag="Auto" />
+                            <ComboBoxItem Content="Space" Tag="Space" />
+                            <ComboBoxItem Content="Surface" Tag="Surface" />
+                        </ComboBox>
+                        <TextBlock Grid.Row="3" Text="Scan interval" Style="{StaticResource Label}" />
+                        <ComboBox x:Name="IntervalBox" Grid.Row="3" Grid.Column="1" Margin="0,3">
+                            <ComboBoxItem Content="100 ms (fast, more CPU)" Tag="100" />
+                            <ComboBoxItem Content="200 ms (default)" Tag="200" />
+                            <ComboBoxItem Content="500 ms (light)" Tag="500" />
+                            <ComboBoxItem Content="1000 ms (very light)" Tag="1000" />
+                        </ComboBox>
+                        <TextBlock Grid.Row="4" Text="RS tolerance (±)" Style="{StaticResource Label}" />
+                        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                            <TextBox x:Name="ToleranceBox" Width="60" Margin="0,3" />
+                            <TextBlock Text="RS units — keep below 7 (ores are 15 apart)" Style="{StaticResource Label}" Margin="10,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="5" Text="Temporal vote" Style="{StaticResource Label}" />
+                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
+                            <TextBox x:Name="VoteMinBox" Width="40" Margin="0,3" />
+                            <TextBlock Text="agreeing of last" Style="{StaticResource Label}" Margin="8,0,8,0" />
+                            <TextBox x:Name="VoteWindowBox" Width="40" Margin="0,3" />
+                            <TextBlock Text="frames" Style="{StaticResource Label}" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="6" Text="Target materials" Style="{StaticResource Label}" />
+                        <TextBox x:Name="TargetsBox" Grid.Row="6" Grid.Column="1" Margin="0,3" ToolTip="Comma separated, e.g. Gold, Tungsten" />
+                    </Grid>
+                    <WrapPanel>
+                        <CheckBox x:Name="SkipBox" Content="Skip frames when nothing changed" />
+                        <CheckBox x:Name="ConfidenceBox" Content="Show confidence" />
+                        <CheckBox x:Name="IdleBox" Content="Show idle 'scanning' pill" />
+                    </WrapPanel>
+
+                    <TextBlock Text="OVERLAY POSITION" Style="{StaticResource Section}" />
+                    <CheckBox x:Name="NextToSignalBox" Content="Follow the RS search area (instead of a fixed position)" Click="Placement_Click" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="50" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Horizontal" Style="{StaticResource Label}" />
+                        <Slider x:Name="XSlider" Grid.Column="1" Minimum="0" Maximum="1" VerticalAlignment="Center" ValueChanged="Overlay_Changed" />
+                        <TextBlock Grid.Column="2" Text="{Binding Value, ElementName=XSlider, StringFormat={}{0:P0}}" Style="{StaticResource Label}" Margin="8,0,0,0" />
+                        <TextBlock Grid.Row="1" Text="Vertical" Style="{StaticResource Label}" />
+                        <Slider x:Name="YSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="0.95" VerticalAlignment="Center" ValueChanged="Overlay_Changed" />
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Value, ElementName=YSlider, StringFormat={}{0:P0}}" Style="{StaticResource Label}" Margin="8,0,0,0" />
+                        <TextBlock Grid.Row="2" Text="Scale" Style="{StaticResource Label}" />
+                        <Slider x:Name="ScaleSlider" Grid.Row="2" Grid.Column="1" Minimum="0.6" Maximum="2.5" VerticalAlignment="Center" ValueChanged="Overlay_Changed" />
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Value, ElementName=ScaleSlider, StringFormat={}{0:F1}×}" Style="{StaticResource Label}" Margin="8,0,0,0" />
+                        <TextBlock Grid.Row="3" Text="Opacity" Style="{StaticResource Label}" />
+                        <Slider x:Name="OpacitySlider" Grid.Row="3" Grid.Column="1" Minimum="0.3" Maximum="1" VerticalAlignment="Center" ValueChanged="Overlay_Changed" />
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Value, ElementName=OpacitySlider, StringFormat={}{0:P0}}" Style="{StaticResource Label}" Margin="8,0,0,0" />
+                    </Grid>
+
+                    <TextBlock Text="HOTKEYS (edit in config/settings.json, then Reload)" Style="{StaticResource Section}" />
+                    <TextBlock x:Name="HotkeysText" FontFamily="Cascadia Mono, Consolas" FontSize="11.5" Foreground="#FFCBD5E1" TextWrapping="Wrap" />
+
+                    <WrapPanel Margin="0,12,0,0">
+                        <Button Content="Apply &amp; save" Click="Apply_Click" FontWeight="SemiBold" />
+                        <Button Content="Analyze screenshot…" Click="Analyze_Click" />
+                        <Button Content="Open data folder" Click="OpenData_Click" />
+                        <Button Content="Open config folder" Click="OpenConfig_Click" />
+                        <Button Content="Open diagnostics folder" Click="OpenDiagnostics_Click" />
+                        <Button Content="Open debug snapshots" Click="OpenSnapshots_Click" />
+                        <Button Content="Run self-test" Click="SelfTest_Click" ToolTip="Checks OCR, capture, database and monitors on this PC and opens a report" />
+                    </WrapPanel>
+                </StackPanel>
+            </Expander>
+
+            <DockPanel Margin="0,14,0,0" LastChildFill="False">
+                <Button DockPanel.Dock="Right" Content="Exit app" Click="Exit_Click" Margin="6,0,0,0" />
+                <Button DockPanel.Dock="Right" Content="Hide to tray" Click="Hide_Click" Margin="6,0,0,0" />
+                <TextBlock Text="Reads the screen only. No memory access, no input automation." Foreground="#FF64748B" FontSize="11" VerticalAlignment="Center" />
+            </DockPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

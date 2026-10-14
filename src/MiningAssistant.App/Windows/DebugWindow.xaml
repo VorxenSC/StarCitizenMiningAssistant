@@ -1,0 +1,38 @@
+<Window x:Class="MiningAssistant.App.Windows.DebugWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mining Assistant — Debug" Width="760" Height="640"
+        Background="#FF0F172A" Foreground="#FFE2E8F0" FontFamily="Segoe UI">
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Scan now" Padding="10,3" Click="Scan_Click" />
+            <Button Content="📸 Debug snapshot" Padding="10,3" Margin="6,0,0,0" Click="Snapshot_Click" />
+            <Button Content="Analyze screenshot…" Padding="10,3" Margin="6,0,0,0" Click="Analyze_Click" />
+            <CheckBox x:Name="FreezeBox" Content="Freeze" Foreground="#FFE2E8F0" VerticalAlignment="Center" Margin="12,0,0,0" />
+            <TextBlock x:Name="Hint" Foreground="#FF94A3B8" VerticalAlignment="Center" Margin="12,0,0,0" />
+        </StackPanel>
+
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                <TextBlock Text="CAPTURED ROI" Foreground="#FF94A3B8" FontSize="11" />
+                <Border Background="#FF020617" Height="120" BorderBrush="#FF334155" BorderThickness="1">
+                    <Image x:Name="RoiImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                </Border>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                <TextBlock Text="IMAGE SENT TO OCR (preprocessed)" Foreground="#FF94A3B8" FontSize="11" />
+                <Border Background="#FF020617" Height="120" BorderBrush="#FF334155" BorderThickness="1">
+                    <Image x:Name="OcrImage" Stretch="Uniform" />
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <TextBox x:Name="Report" IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" FontSize="12.5"
+                 Background="#FF020617" Foreground="#FFE2E8F0" BorderBrush="#FF334155"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" />
+    </DockPanel>
+</Window>
