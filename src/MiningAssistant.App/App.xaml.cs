@@ -69,6 +69,9 @@ public partial class App : Application
                 }),
                 _ => PreviewPanel(),
             };
+            // optional width after the file name, e.g. --render-panel panel.png 806
+            if (at + 2 < e.Args.Length && double.TryParse(e.Args[at + 2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var width))
+                w.Width = width;
             RenderOffscreen(w, e.Args[at + 1]);
             Shutdown(0);
             return;

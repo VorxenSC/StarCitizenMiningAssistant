@@ -4,7 +4,7 @@
         xmlns:ctl="clr-namespace:MiningAssistant.App.Controls"
         Style="{StaticResource VorxenWindow}"
         Icon="/Assets/app.ico"
-        Title="Star Citizen Mining Assistant by Vorxen — Control Panel" Width="1180" MinWidth="680" MinHeight="460" SizeToContent="Height"
+        Title="Star Citizen Mining Assistant by Vorxen — Control Panel" Width="1180" MinWidth="760" MinHeight="460" SizeToContent="Height"
         ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <Style x:Key="Label" TargetType="TextBlock">
@@ -35,12 +35,16 @@
         <StackPanel Margin="36,28,36,36" MaxWidth="1120">
 
             <!-- ───────────── header ───────────── -->
-            <Grid>
+            <Grid x:Name="HeaderGrid">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Image Source="{StaticResource LogoMark}" Height="68" RenderOptions.BitmapScalingMode="HighQuality" />
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">

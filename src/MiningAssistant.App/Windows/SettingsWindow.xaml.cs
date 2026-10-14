@@ -30,6 +30,9 @@ public partial class SettingsWindow : Window
 
     private static readonly Brush StopRed = Frozen(0xC7, 0x3B, 0x42), CancelAmber = Frozen(0x5C, 0x4A, 0x1E), White = Frozen(0xFF, 0xFF, 0xFF);
 
+    /// <summary>Bump when the panel layout changes a lot, so a size saved for the old layout is not reused.</summary>
+    private const int CurrentLayout = 2;
+
     private readonly AppHost _host;
     private readonly Storyboard _pulse = new() { RepeatBehavior = RepeatBehavior.Forever };
     private bool _loading;
@@ -47,11 +50,13 @@ public partial class SettingsWindow : Window
             WelcomeText.Inlines.Add(new Run(", Let's Rock and Roll!"));
         }
         BuildPulse();
+        HeaderGrid.SizeChanged += (_, _) => LayoutHeader();
         Closing += (_, e) => { e.Cancel = true; host.Paths.SaveSettings(host.Settings); Hide(); };
 
         // Resizable: never taller than the screen's work area; the size the user picks is remembered.
         MaxHeight = SystemParameters.WorkArea.Height;
-        if (host.Settings.PanelHeight > 0)
+        Width = Math.Min(Width, SystemParameters.WorkArea.Width);
+        if (host.Settings.PanelHeight > 0 && host.Settings.PanelLayout == CurrentLayout)
         {
             SizeToContent = SizeToContent.Manual;
             Height = Math.Clamp(host.Settings.PanelHeight, MinHeight, MaxHeight);
@@ -63,6 +68,7 @@ public partial class SettingsWindow : Window
             if (!IsLoaded || SizeToContent != SizeToContent.Manual || WindowState != WindowState.Normal) return;
             host.Settings.PanelHeight = ActualHeight;
             host.Settings.PanelWidth = ActualWidth;
+            host.Settings.PanelLayout = CurrentLayout;
         };
         Load(host.Settings);
     }
@@ -162,6 +168,17 @@ public partial class SettingsWindow : Window
         _loading = true;
         OverlaySwitch.IsChecked = st.OverlayVisible;
         _loading = false;
+    }
+
+    /// <summary>Narrow panel: the welcome line moves to its own row under the logo instead of being squeezed.</summary>
+    private void LayoutHeader()
+    {
+        var wide = HeaderGrid.ActualWidth >= 1000;
+        Grid.SetRow(WelcomeText, wide ? 0 : 1);
+        Grid.SetColumn(WelcomeText, wide ? 1 : 0);
+        Grid.SetColumnSpan(WelcomeText, wide ? 1 : 3);
+        WelcomeText.HorizontalAlignment = wide ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+        WelcomeText.Margin = wide ? new Thickness(16, 0, 16, 0) : new Thickness(0, 14, 0, 0);
     }
 
     private void SetRunButton(string label, string icon, Brush background, Brush foreground, bool stroke = false)

@@ -168,6 +168,8 @@ public sealed class AppSettings
     /// <summary>The "Before you start" conditions window was shown and closed at least once.</summary>
     public bool RequirementsAcknowledged { get; set; }
     public double PanelWidth { get; set; }
+    /// <summary>Layout the saved panel size belongs to; sizes saved for an older layout are ignored.</summary>
+    public int PanelLayout { get; set; }
     public bool SoundAlerts { get; set; } = false;
 
     /// <summary>Beep (two-tone, distinct from the ore alert) when the stable RS is one of these numbers.</summary>
