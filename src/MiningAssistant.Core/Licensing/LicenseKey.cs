@@ -13,17 +13,29 @@ namespace MiningAssistant.Core.Licensing;
 /// The PC code (XXXX-XXXX) is a hash of the Windows installation id (see <see cref="PcCode"/>); the player
 /// reads it in the activation window and sends it with their name to get a key.
 ///
+/// The secret is not in the source: it lives in secrets/license-secret.txt (git-ignored) and is embedded
+/// into this assembly at build time (see MiningAssistant.Core.csproj). The web keygen asks for it.
+///
 /// Limitation, by design: 16 characters cannot hold a public-key signature, so the app must contain the
-/// same secret to check keys. This stops casual sharing, not a determined reverse-engineer.
-/// If the repository ever becomes public, rotate the secret (all keys must then be re-issued).
+/// same secret to check keys. This stops casual sharing, not a determined reverse-engineer who decompiles
+/// the exe. Rotating the secret invalidates every key already issued.
 /// </summary>
 public static class LicenseKey
 {
     private const string Scheme = "MA2"; // MA1 = name only (v0.1.1–v0.1.2), no longer accepted
     private const string Alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford: no I, L, O, U
 
-    // Project secret (generated 2026-10-14). Keep this repository private.
-    private static readonly byte[] Secret = Convert.FromHexString("4EFEE4F63D610E096DB46BB88FBC204DAE3105E6BEA44019BB06BD904DA8B86C");
+    // Rotated 2026-10-15 (the previous one had been committed to git). Embedded at build time.
+    private static readonly Lazy<byte[]> SecretBytes = new(LoadSecret);
+
+    private static byte[] LoadSecret()
+    {
+        using var stream = typeof(LicenseKey).Assembly.GetManifestResourceStream("MiningAssistant.LicenseSecret")
+            ?? throw new InvalidOperationException("License secret was not embedded at build time.");
+        var hex = new StreamReader(stream).ReadToEnd().Trim();
+        var bytes = Convert.FromHexString(hex);
+        return bytes.Length == 32 ? bytes : throw new InvalidOperationException("License secret must be 32 bytes (64 hex characters).");
+    }
 
     /// <summary>"  vorxen   sc " → "VORXEN SC": case and extra spaces do not change the key.</summary>
     public static string NormalizeName(string name) => Regex.Replace(name.Trim(), @"\s+", " ").ToUpperInvariant();
@@ -33,7 +45,7 @@ public static class LicenseKey
         var n = NormalizeName(name);
         if (n.Length == 0) throw new ArgumentException("Name is empty.", nameof(name));
         var pc = PcCode.Normalize(pcCode) ?? throw new ArgumentException("PC code must be XXXX-XXXX.", nameof(pcCode));
-        var mac = HMACSHA256.HashData(Secret, Encoding.UTF8.GetBytes($"{Scheme}|{n}|{pc}"));
+        var mac = HMACSHA256.HashData(SecretBytes.Value, Encoding.UTF8.GetBytes($"{Scheme}|{n}|{pc}"));
         return Format(ToBase32(mac)[..16]);
     }
 

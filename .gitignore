@@ -497,3 +497,6 @@ dist/
 # The template's *.app rule (macOS bundles) also matches our 'MiningAssistant.App' project folder on Windows.
 !src/MiningAssistant.App/
 
+
+# License signing secret: never in git (back it up in a password manager).
+secrets/

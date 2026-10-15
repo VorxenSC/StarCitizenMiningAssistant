@@ -10,35 +10,23 @@ using MiningAssistant.Vision.Pipeline;
 
 namespace MiningAssistant.App.Services;
 
-/// <summary>Unknown-signature pop-up, learned signatures and (opt-in) contributions to GitHub.</summary>
+/// <summary>
+/// Unknown-signature pop-up, learned signatures and sharing them. Sharing is always manual: the user
+/// copies a text for Discord or opens a pre-filled GitHub issue in their own browser. The app never
+/// sends anything by itself and needs no GitHub account or tool.
+/// </summary>
 public sealed partial class AppHost
 {
     private LearnedSignatureStore _learned = null!;
-    private SignatureContributor _contributor = null!;
     private UnknownSignatureWindow? _unknownWindow;
     private readonly HashSet<int> _askedThisSession = new();
-    private (bool ok, string detail) _ghStatus = (false, "checking…");
 
     private static string AppVersion => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
 
     public int LearnedCount => _learned.All.Count;
-    public int PendingContributions => _learned.Pending.Count();
+    public int NotSharedCount => _learned.Pending.Count();
 
-    private void InitLearning()
-    {
-        _learned = new LearnedSignatureStore(Paths.LearnedSignaturesFile);
-        _contributor = new SignatureContributor(Path.Combine(Paths.ConfigRoot, "uploads"));
-        RefreshGitHubStatus();
-    }
-
-    public async void RefreshGitHubStatus()
-    {
-        if (!Settings.Contribute.Enabled) { _ghStatus = (false, "not checked"); return; }
-        _ghStatus = (false, "checking…");
-        _ghStatus = await Task.Run(SignatureContributor.CheckAsync);
-        if (!_ghStatus.ok) Log("GitHub check: " + _ghStatus.detail);
-        UpdateStatus();
-    }
+    private void InitLearning() => _learned = new LearnedSignatureStore(Paths.LearnedSignaturesFile);
 
     /// <summary>A new stable RS that nothing explains: ask the user what it is (once per value per session).</summary>
     private void MaybeAskUnknown(ScanFrame frame)
@@ -75,10 +63,6 @@ public sealed partial class AppHost
                 Log($"Never ask again for RS {item.RS}.");
             };
         }
-        _unknownWindow.SetSendOption(Settings.Contribute.Enabled && _ghStatus.ok,
-            !Settings.Contribute.Enabled ? "Sending is off in the control panel (Functions → Send named signatures to GitHub)."
-            : !_ghStatus.ok ? "Not available: " + _ghStatus.detail + ". The signature is still saved on this PC."
-            : $"Only these values and the plate image go to {Settings.Contribute.Repository} (private). Never the full screen.");
         return _unknownWindow;
     }
 
@@ -103,37 +87,66 @@ public sealed partial class AppHost
         _scanner?.Reconfigure(BuildConfig());
         Flash($"✓ learned: RS {s.ObservedRS:N0} = {s.Name} ×{s.Count}", 4);
         Log($"Learned signature: RS {s.ObservedRS} = {s.Name} ×{s.Count} (base {s.BaseRS}, {s.Kind}).");
-
-        if (a.Send) await SubmitAsync(s);
         UpdateStatus();
     }
 
-    private async Task SubmitAsync(LearnedSignature s)
+    /// <summary>What to share: the signatures not shared yet, or all of them when everything was shared before.</summary>
+    private List<LearnedSignature>? ToShare()
     {
-        if (!Settings.Contribute.Enabled) return;
-        var png = s.PlateImage is { } p && File.Exists(p) ? await File.ReadAllBytesAsync(p) : null;
-        var (ok, message, folder) = await Task.Run(() => _contributor.SubmitAsync(s, png, Settings.Contribute, AppVersion));
-        if (ok)
+        var items = _learned.Pending.ToList();
+        if (items.Count == 0) items = _learned.All.ToList();
+        if (items.Count > 0) return items;
+        System.Windows.MessageBox.Show("No learned signatures yet. When an unknown RS appears, name it in the pop-up first.",
+            "Share learned signatures", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        return null;
+    }
+
+    private void MarkShared(IEnumerable<LearnedSignature> items, string how)
+    {
+        foreach (var s in items)
         {
             s.Submitted = true;
-            s.SubmittedPath = folder;
-            _learned.Save();
-            Flash($"↑ sent RS {s.ObservedRS:N0} to GitHub", 3);
-            Log($"Contribution sent: {folder}");
+            s.SubmittedPath = $"{how} {DateTime.Now:yyyy-MM-dd}";
         }
-        else
-        {
-            Flash("⚠ not sent (kept on this PC): " + message, 5);
-            Log($"Contribution failed for RS {s.ObservedRS}: {message}");
-        }
+        _learned.Save();
+        UpdateStatus();
     }
 
-    /// <summary>Retries every learned signature that was not sent yet.</summary>
-    public async void SendPendingContributions()
+    /// <summary>Copies a ready-to-paste text for Discord. Plate images can be dragged from the folder that opens.</summary>
+    public void ShareForDiscord()
     {
-        if (!Settings.Contribute.Enabled) { Flash("Turn on “Send named signatures to GitHub” first"); return; }
-        foreach (var s in _learned.Pending.ToList()) await SubmitAsync(s);
-        UpdateStatus();
+        if (ToShare() is not { } items) return;
+        try { System.Windows.Clipboard.SetText(SignatureShare.DiscordText(items, AppVersion)); }
+        catch (Exception ex)
+        {
+            Log("Clipboard failed: " + ex.Message);
+            System.Windows.MessageBox.Show("Could not copy to the clipboard. Try again.", "Share learned signatures");
+            return;
+        }
+        MarkShared(items, "discord");
+        Flash($"📋 copied {items.Count} signature(s) — paste in Discord", 4);
+        Log($"Copied {items.Count} learned signature(s) for Discord.");
+        OpenPlateImagesIfAny(items);
+    }
+
+    /// <summary>Opens a pre-filled issue in the user's browser; they review it and click Submit there.</summary>
+    public void ShareOnGitHub()
+    {
+        if (ToShare() is not { } items) return;
+        var url = SignatureShare.IssueUrl(Settings.Share.Repository, items, AppVersion, out var included);
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = url, UseShellExecute = true });
+        MarkShared(items.Take(included), "github");
+        Flash(included < items.Count
+            ? $"🌐 opened a GitHub issue with {included} of {items.Count} — click it again for the rest"
+            : $"🌐 opened a GitHub issue with {included} signature(s) — submit it in the browser", 5);
+        Log($"Opened a GitHub issue for {included} learned signature(s).");
+        OpenPlateImagesIfAny(items.Take(included));
+    }
+
+    private void OpenPlateImagesIfAny(IEnumerable<LearnedSignature> items)
+    {
+        if (items.Any(s => s.PlateImage is { } p && File.Exists(p)) && Directory.Exists(Paths.LearnedImagesRoot))
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = Paths.LearnedImagesRoot, UseShellExecute = true });
     }
 
     public void OpenLearnedFile()
@@ -142,21 +155,9 @@ public sealed partial class AppHost
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = Paths.LearnedSignaturesFile, UseShellExecute = true });
     }
 
-    /// <summary>
-    /// Sending is optional, so a missing GitHub sign-in is a note (amber), never an error: named signatures
-    /// stay on this PC and can be sent later with "Send pending to GitHub".
-    /// </summary>
-    private HealthItem ContributionHealth()
-    {
-        if (!Settings.Contribute.Enabled)
-            return new(true, "GitHub contributions", $"off · {LearnedCount} learned signature(s) on this PC");
-        if (_ghStatus.detail == "checking…")
-            return new(true, "GitHub contributions", "on · checking the GitHub sign-in…");
-        if (_ghStatus.ok)
-            return new(true, "GitHub contributions", $"on → {Settings.Contribute.Repository} · learned {LearnedCount}, waiting to send {PendingContributions}");
-        return new(true, "GitHub contributions",
-            $"on, but nothing can be sent yet — {_ghStatus.detail}. Named signatures are kept here ({PendingContributions} waiting). " +
-            "To send them: sign in once with “gh auth login”, then Advanced settings → Send pending to GitHub. Or just turn the switch off.",
-            Notice: true);
-    }
+    private HealthItem LearningHealth() => new(true, "Learned signatures",
+        LearnedCount == 0
+            ? "none yet — name unknown signatures in the pop-up, then share them from Advanced settings"
+            : $"{LearnedCount} on this PC · {NotSharedCount} not shared yet" +
+              (NotSharedCount > 0 ? " — Advanced settings → Share on Discord / GitHub" : ""));
 }

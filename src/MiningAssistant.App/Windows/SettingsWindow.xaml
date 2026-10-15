@@ -136,8 +136,6 @@
                         <CheckBox x:Name="AutoStartSwitch" Style="{StaticResource Switch}" Content="Start scanning automatically (no countdown)" Click="Feature_Click" />
                         <CheckBox x:Name="MinimizeSwitch" Style="{StaticResource Switch}" Content="Minimize this panel when scanning starts" Click="Feature_Click" />
                         <CheckBox x:Name="AskUnknownSwitch" Style="{StaticResource Switch}" Content="Ask me to name unknown signatures (pop-up)" Click="Feature_Click" />
-                        <CheckBox x:Name="ContributeSwitch" Style="{StaticResource Switch}" Content="Send named signatures to GitHub (opt-in)" Click="Contribute_Click"
-                                  ToolTip="Sends only the values you typed and the RS plate image to the private project repository, through the GitHub CLI. Nothing is sent while this is off." />
                         </UniformGrid>
                     </DockPanel>
                 </Border>
@@ -375,7 +373,10 @@
                         <Button Content="Open diagnostics folder" Click="OpenDiagnostics_Click" Style="{StaticResource SmallBtn}" />
                         <Button Content="Open debug snapshots" Click="OpenSnapshots_Click" Style="{StaticResource SmallBtn}" />
                         <Button Content="Learned signatures" Click="OpenLearned_Click" Style="{StaticResource SmallBtn}" />
-                        <Button Content="Send pending to GitHub" Click="SendPending_Click" Style="{StaticResource SmallBtn}" />
+                        <Button Content="Share on Discord (copy)" Click="ShareDiscord_Click" Style="{StaticResource SmallBtn}"
+                                ToolTip="Copies the signatures you named, ready to paste in Discord. Nothing is sent by the app." />
+                        <Button Content="Share on GitHub…" Click="ShareGitHub_Click" Style="{StaticResource SmallBtn}"
+                                ToolTip="Opens a pre-filled issue in your browser; you review it and click Submit there." />
                         <Button Content="Change user / key…" Click="ChangeLicense_Click" Style="{StaticResource SmallBtn}" ToolTip="Forget this activation and ask for a name and key again" />
                         <Button Content="Run self-test" Click="SelfTest_Click" Style="{StaticResource SmallBtn}" ToolTip="Checks OCR, capture, database and monitors on this PC and opens a report" />
                     </WrapPanel>

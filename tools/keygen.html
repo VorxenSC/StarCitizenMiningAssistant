@@ -154,7 +154,7 @@ button.small { height: 34px; padding: 0 12px; font-size: 13px; }
 
   <p class="foot">
     The key only works for that name on that PC. If the player reinstalls Windows, the PC code changes and they need a new key.
-    The secret is the <code>Secret</code> value in <code>src/MiningAssistant.Core/Licensing/LicenseKey.cs</code>. Same algorithm as
+    The secret is in your password manager (and in <code>secrets/license-secret.txt</code> on the build PC, never in git). It was replaced on 15 Oct 2026; keys made before that no longer work. Same algorithm as
     <code>mining-cli keygen "Name" PC-CODE</code>: HMAC-SHA256 of <code>MA2|NAME|PC-CODE</code>, first 16 Crockford base-32 characters.
   </p>
 </div>
@@ -163,7 +163,7 @@ button.small { height: 34px; padding: 0 12px; font-size: 13px; }
 (() => {
   const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford: no I, L, O, U
   // Known pair made by the app's own keygen: proves the pasted secret is the right one without storing it.
-  const CHECK = { name: "TEST", pc: "0000-0000", key: "RTJC-HR43-RZCF-JNJX" };
+  const CHECK = { name: "TEST", pc: "0000-0000", key: "0QDE-6ZFV-Q9MR-AEXQ" }; // secret rotated 2026-10-15
   const STORE_SECRET = "mak.secret", STORE_HISTORY = "mak.history";
   const $ = (id) => document.getElementById(id);
 

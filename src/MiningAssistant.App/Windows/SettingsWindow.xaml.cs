@@ -89,7 +89,6 @@ public partial class SettingsWindow : Window
         AutoStartSwitch.IsChecked = s.AutoStart;
         MinimizeSwitch.IsChecked = s.MinimizePanelOnStart;
         AskUnknownSwitch.IsChecked = s.AskForUnknownSignatures;
-        ContributeSwitch.IsChecked = s.Contribute.Enabled;
         AlertRsBox.Text = RsAlert.Format(s.AlertRsValues);
         AlertMultiplesBox.IsChecked = s.AlertRsMultiples;
         UpdateAlertHint(s);
@@ -253,39 +252,12 @@ public partial class SettingsWindow : Window
 
     private void TestAlert_Click(object sender, RoutedEventArgs e) => AppHost.PlayRsAlertTone();
 
-    // ───────────────────────── learned signatures / contributions ─────────────────────────
-
-    /// <summary>Turning sending on asks for explicit consent, showing exactly what leaves the PC.</summary>
-    private void Contribute_Click(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-        var s = _host.Settings;
-        if (ContributeSwitch.IsChecked == true && !s.Contribute.Enabled)
-        {
-            var answer = MessageBox.Show(
-                "When you name an unknown signature and tick “Send”, the app will create a folder in\n\n" +
-                $"    github.com/{s.Contribute.Repository}  ({s.Contribute.Folder}/)\n\n" +
-                "with ONLY:\n" +
-                "  • the RS number, the name / count / type / notes you typed, game version, date\n" +
-                "  • a small image of the RS plate (pin icon + number)\n\n" +
-                "Never the full screen, chat, or anything else. It is sent by the GitHub CLI (gh) logged in on\n" +
-                "this PC; the app itself opens no network connection. You can turn this off at any time.\n\n" +
-                "Turn on sending?",
-                "Send named signatures to GitHub", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (answer != MessageBoxResult.Yes)
-            {
-                ContributeSwitch.IsChecked = false;
-                return;
-            }
-        }
-        s.Contribute.Enabled = ContributeSwitch.IsChecked == true;
-        _host.ApplySettings();
-        _host.RefreshGitHubStatus();
-    }
+    // ───────────────────────── learned signatures / sharing ─────────────────────────
 
     private void OpenLearned_Click(object sender, RoutedEventArgs e) => _host.OpenLearnedFile();
     private void ChangeLicense_Click(object sender, RoutedEventArgs e) => _host.ChangeLicense();
-    private void SendPending_Click(object sender, RoutedEventArgs e) => _host.SendPendingContributions();
+    private void ShareDiscord_Click(object sender, RoutedEventArgs e) => _host.ShareForDiscord();
+    private void ShareGitHub_Click(object sender, RoutedEventArgs e) => _host.ShareOnGitHub();
 
     private void UpdateAlertHint(AppSettings s) =>
         AlertRsHint.Text = s.AlertRsValues.Count == 0

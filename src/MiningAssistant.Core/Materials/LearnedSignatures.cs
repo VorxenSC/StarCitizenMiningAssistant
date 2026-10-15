@@ -17,10 +17,11 @@ public sealed class LearnedSignature
     public string Notes { get; set; } = "";
     public string GameVersion { get; set; } = "";
     public DateTime LearnedAt { get; set; }
-    /// <summary>Sent to the GitHub repository (contributions/).</summary>
+    /// <summary>Already shared by the user (copied for Discord or opened as a GitHub issue). JSON name kept from older versions.</summary>
     public bool Submitted { get; set; }
+    /// <summary>How / when it was shared, e.g. "discord 2026-10-15".</summary>
     public string? SubmittedPath { get; set; }
-    /// <summary>Local file of the plate crop shown in the pop-up (sent along with the values).</summary>
+    /// <summary>Local file of the plate crop shown in the pop-up (stays on this PC; the user may attach it).</summary>
     public string? PlateImage { get; set; }
 
     public static int ComputeBase(int observedRs, int count) =>

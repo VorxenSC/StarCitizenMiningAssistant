@@ -25,6 +25,9 @@ public class AntiCheatSafetyTests
         "PrintWindow", "GetWindowDC",
         // network (all processing must stay local)
         "HttpClient", "WebClient", "TcpClient", "UdpClient", "Socket(",
+        // ...and not through a helper program either: no driving command-line tools (e.g. the GitHub CLI)
+        // and reading their output. Opening a file, folder or link with the user's own apps is fine.
+        "gh.exe", "GitHub CLI", "RedirectStandardOutput", "RedirectStandardInput", ".ArgumentList",
     };
 
     /// <summary>The only native functions the app is allowed to import, all from user32.dll.</summary>
@@ -34,7 +37,7 @@ public class AntiCheatSafetyTests
         "GetWindowLongPtrW", "SetWindowLongPtrW", "SetWindowPos", "SetWindowDisplayAffinity", "GetWindowRect",
         // Hotkeys: passive keyboard Raw Input sink (receive-only; no hook, keys are not blocked or altered).
         "RegisterRawInputDevices", "GetRawInputData",
-        // Keyboard layout lookup so "[" / "]" / "\" hotkeys work on ABNT2 and US layouts.
+        // Keyboard layout lookup so symbol hotkeys like "/" work on ABNT2 and US layouts.
         "VkKeyScanW",
     };
 

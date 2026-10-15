@@ -59,22 +59,36 @@ public class LearnedSignatureTests
         Assert.Equal(expected, LearnedSignature.ComputeBase(rs, count));
 
     [Fact]
-    public void Contribution_payload_has_values_and_plate_without_any_screen_data()
+    public void Discord_text_and_github_issue_carry_only_the_typed_values()
     {
-        var s = new LearnedSignature { Name = "Ouratite (raw)", ObservedRS = 6740, Count = 2, BaseRS = 3370, GameVersion = "4.10.1", LearnedAt = new DateTime(2026, 10, 14, 13, 5, 9) };
-        var files = ContributionPayload.Build(s, new byte[] { 1, 2, 3 }, "contributions", "main", "0.1.0");
+        var s = new LearnedSignature { Name = "Ouratite (raw)", ObservedRS = 6740, Count = 2, BaseRS = 3370, Kind = SignalKind.Ore,
+            Notes = "near | Yela", GameVersion = "4.10.1", LearnedAt = new DateTime(2026, 10, 14, 13, 5, 9), PlateImage = @"C:\secret\path\plate.png" };
+        var items = new[] { s };
 
-        Assert.Equal(2, files.Count);
-        Assert.Equal("contributions/20261014_130509_rs6740_ouratite-raw/signature.json", files[0].RepoPath);
-        Assert.Equal("contributions/20261014_130509_rs6740_ouratite-raw/plate.png", files[1].RepoPath);
+        var text = SignatureShare.DiscordText(items, "0.1.8");
+        Assert.Contains("RS 6,740 = Ouratite (raw) ×2 (base 3,370, Ore)", text);
+        Assert.Contains("4.10.1", text);
+        Assert.DoesNotContain(@"C:\secret", text); // local paths never leave the PC
 
-        using var body = JsonDocument.Parse(files[0].RequestBodyJson);
-        Assert.Equal("main", body.RootElement.GetProperty("branch").GetString());
-        var content = Encoding.UTF8.GetString(Convert.FromBase64String(body.RootElement.GetProperty("content").GetString()!));
-        using var info = JsonDocument.Parse(content);
-        Assert.Equal(3370, info.RootElement.GetProperty("baseRS").GetInt32());
-        Assert.Equal("Ouratite (raw)", info.RootElement.GetProperty("name").GetString());
+        var url = SignatureShare.IssueUrl("VorxenSC/MiningAssistant", items, "0.1.8", out var included);
+        Assert.Equal(1, included);
+        Assert.StartsWith("https://github.com/VorxenSC/MiningAssistant/issues/new?title=", url);
+        var body = Uri.UnescapeDataString(url[(url.IndexOf("&body=", StringComparison.Ordinal) + 6)..]);
+        Assert.Contains("| 6,740 | Ouratite (raw) | 2 | 3,370 | Ore | 4.10.1 | 2026-10-14 | near / Yela |", body); // pipes escaped
+        Assert.DoesNotContain(@"C:\secret", body);
+    }
 
-        Assert.Single(ContributionPayload.Build(s, null, "contributions", "main", "0.1.0")); // no image → values only
+    [Fact]
+    public void A_long_list_is_split_so_the_issue_link_stays_usable()
+    {
+        var items = Enumerable.Range(1, 400).Select(i => new LearnedSignature
+        {
+            Name = "Mineral number " + i, ObservedRS = 3000 + i, Count = 1, BaseRS = 3000 + i, Notes = new string('x', 40),
+            GameVersion = "4.10.1", LearnedAt = new DateTime(2026, 10, 15),
+        }).ToList();
+
+        var url = SignatureShare.IssueUrl("VorxenSC/MiningAssistant", items, "0.1.8", out var included);
+        Assert.InRange(included, 1, 399);
+        Assert.True(url.Length <= SignatureShare.MaxIssueUrlLength);
     }
 }

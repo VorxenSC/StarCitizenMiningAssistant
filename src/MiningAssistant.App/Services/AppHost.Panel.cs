@@ -292,7 +292,7 @@ public sealed partial class AppHost
                   (_hotkeys.KeysReceived == 0 ? " (press any key; if it stays 0 inside the game, the game is running as administrator)" : "")),
         };
 
-        health.Add(ContributionHealth());
+        health.Add(LearningHealth());
 
         // Last item: our own windows sit in the middle of the screen by default — exactly where the RS plate appears.
         if (region is not null)

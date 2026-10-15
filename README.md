@@ -12,7 +12,7 @@ Overlay para Windows que **lê a tela** durante a mineração com Prospector/MOL
 └──────────────────────┘
 ```
 
-> **Copiloto visual, não um bot.** O app só observa a tela exatamente como você vê. Ele **não** injeta DLL, **não** lê memória, **não** modifica arquivos do jogo, **não** intercepta rede, **não** faz hook e **não** envia nenhuma tecla/mouse ao jogo. Todo processamento (captura + OCR) é local; nada é enviado para a internet. Veja [Segurança e anti-cheat](#segurança-e-anti-cheat-easy-anti-cheat).
+> **Copiloto visual, não um bot.** O app só observa a tela exatamente como você vê. Ele **não** injeta DLL, **não** lê memória, **não** modifica arquivos do jogo, **não** intercepta rede, **não** faz hook e **não** envia nenhuma tecla/mouse ao jogo. Todo processamento (captura + OCR) é local e o app **não abre nenhuma conexão de rede**. Compartilhar assinaturas é sempre manual (copiar para o Discord ou abrir um formulário no seu navegador). Veja [Segurança e anti-cheat](#segurança-e-anti-cheat-easy-anti-cheat).
 
 ---
 
@@ -29,7 +29,7 @@ Overlay para Windows que **lê a tela** durante a mineração com Prospector/MOL
 | Confiança / Exact · Probable · Ambiguous · Unknown | ✅ |
 | Votação temporal (maioria de N frames) | ✅ |
 | Overlay transparente, click-through, always-on-top, fora do Alt+Tab | ✅ |
-| Hotkeys globais | ✅ |
+| Hotkeys globais (Raw Input passivo) | ✅ |
 | Save Unknown Signature | ✅ |
 | Target materials (filtro) + alertas sonoros | ✅ |
 | Debug Mode + Analyze Screenshot + CLI de regressão | ✅ |
@@ -60,6 +60,10 @@ powershell -ExecutionPolicy Bypass -File publish.ps1
 | `dist\MiningAssistant\MiningAssistant.exe` | autocontido: roda em qualquer Windows 10/11 x64 sem instalar nada |
 | `dist\MiningAssistant.zip` | a pasta acima zipada, sem configurações locais, para copiar para **outro computador** |
 
+### Distribuição
+
+Este repositório (código) é **privado** e não tem releases. Os jogadores baixam do repositório **público só de downloads**, sem código: [VorxenSC/MiningAssistant](https://github.com/VorxenSC/MiningAssistant) → link fixo da última versão: `https://github.com/VorxenSC/MiningAssistant/releases/latest/download/MiningAssistant.zip`. Ninguém precisa de acesso a este repositório.
+
 ### Em outro computador
 
 1. Descompacte `MiningAssistant.zip` em qualquer pasta e abra `MiningAssistant.exe`. O painel de controle abre na hora.
@@ -72,13 +76,15 @@ powershell -ExecutionPolicy Bypass -File publish.ps1
 Na primeira vez o app pede **nome** e **key**. A key vale para aquele nome **naquele PC**: copiar a pasta instalada (ou passar a key) para outro computador não ativa o app.
 
 1. O jogador abre o app e clica **Copy name + code**: copia o nome e o **código do PC** (`XXXX-XXXX`) para mandar ao Vorxen.
-2. Vorxen gera a key:
+2. Vorxen gera a key no gerador web (Artifact privado "Mining Assistant Keygen" no claude.ai, pede o segredo) ou aqui:
    ```bash
    dotnet run --project src/MiningAssistant.Cli -- keygen "Nome do Jogador" XXXX-XXXX
    ```
 3. O jogador digita a key e clica **ACTIVATE** (só uma vez neste PC).
 
 O código do PC é um hash do identificador da instalação do Windows (`MachineGuid`, lido localmente, nunca enviado). Ele muda se o Windows for reinstalado; aí o jogador precisa de uma key nova. Keys antigas, só por nome (até a v0.1.2), não são mais aceitas.
+
+**Segredo das keys:** fica em `secrets/license-secret.txt` (64 caracteres hexadecimais), **fora do git** (`.gitignore`), e é embutido no app só no build. Guarde uma cópia no gerenciador de senhas: sem ele não dá para compilar nem gerar keys, e um segredo novo invalida todas as keys já emitidas. Ele foi trocado em 15/10/2026 (o anterior tinha ido para o histórico do git); as keys de antes dessa data não valem mais. Limite honesto: quem descompilar o `.exe` consegue extrair o segredo — a key impede o compartilhamento casual, não um cracker determinado.
 
 ### Compilar e testar
 
@@ -96,7 +102,7 @@ O painel abre junto com o app (também pela bandeja ou abrindo o `.exe` de novo)
 - **▶ START / ■ STOP**: START faz uma **contagem regressiva de 5 a 1** no centro da tela, com o aviso para trocar para a janela do Star Citizen, e só então começa a ler a tela. Clicar durante a contagem cancela. Quando a leitura começa, o painel minimiza sozinho, porque ele abre exatamente onde o código RS aparece.
 - **⟳ Reload**: relê `settings.json`, a calibração e `materials.json` do disco e recria scanner, OCR, atalhos e overlay, sem fechar o app.
 - **Restart app**: fecha e abre o app de novo.
-- **Funções (ON/OFF)**: overlay, localização automática da placa, atalhos, alertas sonoros, só alvos, salvar capturas ilegíveis, modo debug, esconder overlay de gravações, abrir o painel ao iniciar, iniciar sem contagem, minimizar o painel ao iniciar.
+- **Funções (ON/OFF)**: overlay, localização automática da placa, atalhos, alertas sonoros, só alvos, salvar capturas ilegíveis, modo debug, esconder overlay de gravações, abrir o painel ao iniciar, iniciar sem contagem, minimizar o painel ao iniciar, perguntar sobre assinaturas desconhecidas.
 - **Ao vivo**: miniatura do que o app está capturando, com a placa encontrada contornada em verde, a leitura atual, o valor estável e o resultado.
 - **Checklist**: OCR, banco, área de busca, resolução, captura, atalhos e se alguma janela do app está cobrindo a área de busca, com ✓/✗ e o motivo.
 - **Advanced settings**: versão do banco, monitor, contexto, intervalo, tolerância, votação, alvos, posição do overlay, pastas e o autoteste.
@@ -184,7 +190,11 @@ Quando aparece um RS que nada no banco explica, abre uma **janelinha persistente
 
 Desligue a janela em *Functions → Ask me to name unknown signatures*.
 
-**Enviar para o repositório (opcional):** com *Functions → Send named signatures to GitHub* ligado (pede confirmação) e a caixa *Send…* marcada na janelinha, a assinatura vai para `contributions/` no repositório privado: só os valores digitados e o recorte da placa, **nunca a tela inteira**. O envio é feito pelo **GitHub CLI (`gh`)** logado neste PC. O app em si não abre conexão de rede, não usa scripts codificados e não guarda senha ou token; o login fica no Gerenciador de Credenciais do Windows, gerenciado pelo `gh`. Isso evita que o antivírus ou o firewall tratem o envio como suspeito. Se falhar (sem `gh`, sem internet), a assinatura fica salva como pendente: *Advanced settings → Send pending to GitHub*. Para preparar outro PC: `winget install GitHub.cli` e `gh auth login`.
+**Compartilhar (opcional, sempre manual):** em *Advanced settings*:
+- **Share on Discord (copy)** copia um texto pronto com as assinaturas ainda não compartilhadas (RS, nome, quantidade, tipo, notas, versões). Cole no Discord. Não precisa de conta.
+- **Share on GitHub…** abre no seu navegador um formulário (*issue*) já preenchido no repositório público de downloads, [VorxenSC/MiningAssistant](https://github.com/VorxenSC/MiningAssistant). Você revisa e clica *Submit*; precisa de conta no GitHub.
+
+Nos dois casos a pasta `config\learned` abre ao lado, para você arrastar o recorte da placa se quiser. Só vai o que você digitou, **nunca a tela inteira** nem caminhos do seu PC. O app não envia nada sozinho e não precisa de GitHub CLI.
 ### O que o overlay mostra
 
 | Situação | Overlay |
@@ -329,7 +339,7 @@ test_images/
 
 Interfaces `IScreenCapture` e `IOcrEngine` permitem trocar a captura (ex.: Windows Graphics Capture) ou o OCR (ex.: Tesseract) sem mexer no resto.
 
-Arquivos gerados ao lado do executável: `config/settings.json`, `config/profiles/*.roi.json`, `config/app.log`, `unknown_signatures/`.
+Arquivos gerados ao lado do executável: `config/settings.json`, `config/license.json`, `config/profiles/*.roi.json`, `config/learned_signatures.json`, `config/learned/`, `config/app.log`, `debug_snapshots/`.
 
 ---
 
@@ -341,10 +351,10 @@ O Star Citizen usa Easy Anti-Cheat. O app foi desenhado para ficar **inteirament
 |---|---|
 | lê a imagem já composta da área de trabalho (`BitBlt`/`CopyFromScreen`, igual a print, OBS, Discord) — só um retângulo pequeno | abrir o processo do jogo (`OpenProcess`), ler/escrever memória |
 | desenha **suas próprias** janelas (overlay transparente, click-through) | injetar DLL, hook de DirectX/Vulkan/WinAPI, overlay injetado |
-| registra atalhos globais com `RegisterHotKey` (API oficial do Windows, não é hook) | enviar teclas/mouse ao jogo, macros, automação |
-| lê/grava apenas arquivos na própria pasta | tocar arquivos do jogo; acessar rede |
+| ouve o teclado por **Raw Input** passivo (`RIDEV_INPUTSINK`: só recebe, não bloqueia nem altera teclas; não é hook) | enviar teclas/mouse ao jogo, macros, automação |
+| lê/grava apenas arquivos na própria pasta; abre arquivos, pastas e links **só quando você clica** | tocar arquivos do jogo; abrir conexão de rede; rodar ferramentas externas em segundo plano |
 
-Isso é **verificado automaticamente**: `tests/MiningAssistant.Tests/AntiCheatSafetyTests.cs` falha o build se qualquer código usar APIs de processo/memória/injeção/entrada sintética/rede ou importar qualquer função nativa fora de uma lista de 9 funções de `user32.dll`.
+Isso é **verificado automaticamente**: `tests/MiningAssistant.Tests/AntiCheatSafetyTests.cs` falha o build se qualquer código usar APIs de processo/memória/injeção/entrada sintética/rede, rodar ferramentas de linha de comando lendo a saída delas (como o GitHub CLI), ou importar qualquer função nativa fora de uma lista de 11 funções de `user32.dll`. É uma verificação do código-fonte (procura essas APIs pelo nome): uma rede de proteção contra regressões, não uma prova formal — e o EAC não lê testes.
 
 **Windows SmartScreen em outro PC:** o `.exe` não tem assinatura digital paga, então, ao abrir pela primeira vez um `.zip` baixado da internet, o Windows pode mostrar "o Windows protegeu o computador". Clique em *Mais informações → Executar assim mesmo*, ou, antes de abrir, clique com o botão direito no `.zip` → *Propriedades* → marque *Desbloquear*. Copiar a pasta por pendrive ou pela rede local não gera esse aviso. Uma solução definitiva seria um certificado de assinatura de código.
 **Honestidade sobre o risco:** a detecção técnica do EAC mira injeção, leitura de memória e manipulação de arquivos — nada disso existe aqui. Mas ninguém fora da CIG pode garantir 100% como a política será aplicada. O EULA proíbe software de terceiros *"designed to modify the Game experience and/or give you an advantage"* e programas de macro/automação. Este app não modifica o jogo nem automatiza nada; ele só interpreta um número que já está na sua tela (o mesmo que consultar uma tabela de RS). Se quiser certeza absoluta, pergunte ao suporte da CIG antes de usar.

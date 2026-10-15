@@ -212,7 +212,7 @@ public sealed class AppSettings
     public bool AskForUnknownSignatures { get; set; } = true;
     /// <summary>RS values the user chose "never ask again" for.</summary>
     public List<int> IgnoredUnknownRs { get; set; } = new();
-    public ContributionSettings Contribute { get; set; } = new();
+    public ShareSettings Share { get; set; } = new();
 
     /// <summary>When TargetOnly is on, only these materials are announced ("TARGET FOUND").</summary>
     public List<string> TargetMaterials { get; set; } = new();
@@ -225,14 +225,11 @@ public sealed class AppSettings
 }
 
 /// <summary>
-/// Sending named signatures to the project's GitHub repository (contributions/ folder) so the shipped
-/// database can be improved. Off unless the user turns it on; nothing is sent otherwise.
-/// Uses the GitHub CLI ("gh") logged in on this PC — the app itself opens no network connection.
+/// Where "Share on GitHub" opens a pre-filled issue: the public downloads repository (no source code).
+/// Sharing is always manual — copy for Discord, or an issue the user submits in their own browser;
+/// the app never sends anything by itself.
 /// </summary>
-public sealed class ContributionSettings
+public sealed class ShareSettings
 {
-    public bool Enabled { get; set; } = false;
-    public string Repository { get; set; } = "VorxenSC/StarCitizenMiningAssistant";
-    public string Branch { get; set; } = "main";
-    public string Folder { get; set; } = "contributions";
+    public string Repository { get; set; } = "VorxenSC/MiningAssistant";
 }

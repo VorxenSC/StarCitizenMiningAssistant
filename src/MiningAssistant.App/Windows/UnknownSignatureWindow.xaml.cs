@@ -12,7 +12,7 @@ namespace MiningAssistant.App.Windows;
 public sealed record UnknownItem(int RS, DateTime At, byte[]? PlatePng);
 
 /// <summary>What the user answered.</summary>
-public sealed record UnknownAnswer(UnknownItem Item, string Name, int Count, SignalKind Kind, string Notes, bool Send);
+public sealed record UnknownAnswer(UnknownItem Item, string Name, int Count, SignalKind Kind, string Notes);
 
 /// <summary>
 /// Persistent pop-up that asks what an unknown signature is. It stays on screen (it does not vanish
@@ -35,13 +35,6 @@ public partial class UnknownSignatureWindow : Window
     }
 
     public int Pending => _queue.Count + (_current is null ? 0 : 1);
-
-    /// <summary>Default for the "send" box and the explanation under it.</summary>
-    public void SetSendOption(bool enabledInSettings, string hint)
-    {
-        SendBox.IsChecked = enabledInSettings;
-        SendHint.Text = hint;
-    }
 
     public void Enqueue(UnknownItem item, MonitorInfo monitor)
     {
@@ -129,7 +122,7 @@ public partial class UnknownSignatureWindow : Window
         if (name.Length == 0) { ErrorText.Text = "Type what it is (or click Ignore)."; return; }
         if (Count == 0) { ErrorText.Text = "How many rocks: enter a number from 1 to 99."; return; }
         var kind = Enum.Parse<SignalKind>((string)((ComboBoxItem)KindBox.SelectedItem).Tag);
-        Saved?.Invoke(new UnknownAnswer(_current, name, Count, kind, NotesBox.Text.Trim(), SendBox.IsChecked == true));
+        Saved?.Invoke(new UnknownAnswer(_current, name, Count, kind, NotesBox.Text.Trim()));
         Next();
     }
 
