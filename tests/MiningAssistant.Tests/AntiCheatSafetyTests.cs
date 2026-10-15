@@ -41,6 +41,32 @@ public class AntiCheatSafetyTests
         "VkKeyScanW",
     };
 
+    private const string UpdaterFile = "Updater.cs";
+
+    /// <summary>
+    /// Updates are the app's only network access: one file, HTTPS GETs to github.com only, and every
+    /// download is checked against the signed manifest before it is installed.
+    /// </summary>
+    [Fact]
+    public void Network_is_only_the_signed_github_updater()
+    {
+        var files = SourceFiles().ToList();
+        var updater = Assert.Single(files, f => Path.GetFileName(f) == UpdaterFile);
+        var text = File.ReadAllText(updater);
+
+        var hosts = Regex.Matches(text, @"https?://([^/""\s{]+)").Select(m => m.Groups[1].Value).Distinct().ToList();
+        Assert.NotEmpty(hosts);
+        Assert.All(hosts, h => Assert.Equal("github.com", h));
+        Assert.DoesNotContain("http://", text);                       // HTTPS only
+        Assert.DoesNotContain("PostAsync", text);                     // nothing is uploaded
+        Assert.DoesNotContain("PutAsync", text);
+        Assert.Contains("UpdateVerifier.IsSignatureValid", text);     // manifest must be signed
+        Assert.Contains("Sha256", text);                              // download must match it
+
+        foreach (var f in files.Where(f => f != updater))
+            Assert.DoesNotContain("System.Net.Http", File.ReadAllText(f));
+    }
+
     [Fact]
     public void Raw_input_is_registered_passively()
     {
@@ -69,8 +95,12 @@ public class AntiCheatSafetyTests
         {
             var text = File.ReadAllText(file);
             foreach (var api in Forbidden)
+            {
+                // The one sanctioned network use: opt-in automatic updates, checked by the test below.
+                if (api == "HttpClient" && Path.GetFileName(file) == UpdaterFile) continue;
                 if (text.Contains(api, StringComparison.Ordinal))
                     hits.Add($"{Path.GetFileName(file)}: {api}");
+            }
         }
         Assert.True(hits.Count == 0, "Forbidden APIs found:\n" + string.Join("\n", hits));
     }

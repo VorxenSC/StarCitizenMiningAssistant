@@ -213,6 +213,7 @@ public sealed class AppSettings
     /// <summary>RS values the user chose "never ask again" for.</summary>
     public List<int> IgnoredUnknownRs { get; set; } = new();
     public ShareSettings Share { get; set; } = new();
+    public UpdateSettings Updates { get; set; } = new();
 
     /// <summary>When TargetOnly is on, only these materials are announced ("TARGET FOUND").</summary>
     public List<string> TargetMaterials { get; set; } = new();
@@ -222,6 +223,17 @@ public sealed class AppSettings
     public OcrSettings Ocr { get; set; } = new();
     public OverlaySettings Overlay { get; set; } = new();
     public HotkeySettings Hotkeys { get; set; } = new();
+}
+
+/// <summary>
+/// Automatic updates from the public downloads repository. <see cref="Enabled"/> is null until the user
+/// answers the one-time question: checking GitHub is the app's only network access, so it needs consent.
+/// </summary>
+public sealed class UpdateSettings
+{
+    public bool? Enabled { get; set; }
+    public string Repository { get; set; } = "VorxenSC/MiningAssistant";
+    public DateTime? LastCheck { get; set; }
 }
 
 /// <summary>

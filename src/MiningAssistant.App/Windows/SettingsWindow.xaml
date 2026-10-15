@@ -136,6 +136,8 @@
                         <CheckBox x:Name="AutoStartSwitch" Style="{StaticResource Switch}" Content="Start scanning automatically (no countdown)" Click="Feature_Click" />
                         <CheckBox x:Name="MinimizeSwitch" Style="{StaticResource Switch}" Content="Minimize this panel when scanning starts" Click="Feature_Click" />
                         <CheckBox x:Name="AskUnknownSwitch" Style="{StaticResource Switch}" Content="Ask me to name unknown signatures (pop-up)" Click="Feature_Click" />
+                        <CheckBox x:Name="UpdatesSwitch" Style="{StaticResource Switch}" Content="Automatic updates (from GitHub)" Click="Updates_Click"
+                                  ToolTip="Checks github.com/VorxenSC/MiningAssistant at start and every 6 hours, downloads while scanning is stopped and installs at the next start. Only signed updates are installed. This is the app's only internet access." />
                         </UniformGrid>
                     </DockPanel>
                 </Border>
@@ -378,6 +380,10 @@
                         <Button Content="Share on GitHub…" Click="ShareGitHub_Click" Style="{StaticResource SmallBtn}"
                                 ToolTip="Opens a pre-filled issue in your browser; you review it and click Submit there." />
                         <Button Content="Change user / key…" Click="ChangeLicense_Click" Style="{StaticResource SmallBtn}" ToolTip="Forget this activation and ask for a name and key again" />
+                        <Button Content="Check for updates" Click="CheckUpdates_Click" Style="{StaticResource SmallBtn}"
+                                ToolTip="Looks for a newer version on GitHub now (works even with automatic updates off)" />
+                        <Button x:Name="InstallUpdateButton" Content="Install update now" Click="InstallUpdate_Click" Style="{StaticResource SmallBtn}"
+                                ToolTip="Restarts the app and installs the version already downloaded" />
                         <Button Content="Run self-test" Click="SelfTest_Click" Style="{StaticResource SmallBtn}" ToolTip="Checks OCR, capture, database and monitors on this PC and opens a report" />
                     </WrapPanel>
                 </StackPanel>

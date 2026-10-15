@@ -89,6 +89,7 @@ public partial class SettingsWindow : Window
         AutoStartSwitch.IsChecked = s.AutoStart;
         MinimizeSwitch.IsChecked = s.MinimizePanelOnStart;
         AskUnknownSwitch.IsChecked = s.AskForUnknownSignatures;
+        UpdatesSwitch.IsChecked = s.Updates.Enabled == true;
         AlertRsBox.Text = RsAlert.Format(s.AlertRsValues);
         AlertMultiplesBox.IsChecked = s.AlertRsMultiples;
         UpdateAlertHint(s);
@@ -166,7 +167,9 @@ public partial class SettingsWindow : Window
 
         _loading = true;
         OverlaySwitch.IsChecked = st.OverlayVisible;
+        UpdatesSwitch.IsChecked = _host.UpdatesEnabled;
         _loading = false;
+        InstallUpdateButton.IsEnabled = _host.StagedUpdate is not null;
     }
 
     /// <summary>Narrow panel: the welcome line moves to its own row under the logo instead of being squeezed.</summary>
@@ -257,6 +260,9 @@ public partial class SettingsWindow : Window
     private void OpenLearned_Click(object sender, RoutedEventArgs e) => _host.OpenLearnedFile();
     private void ChangeLicense_Click(object sender, RoutedEventArgs e) => _host.ChangeLicense();
     private void ShareDiscord_Click(object sender, RoutedEventArgs e) => _host.ShareForDiscord();
+    private void Updates_Click(object sender, RoutedEventArgs e) { if (!_loading) _host.SetUpdatesEnabled(UpdatesSwitch.IsChecked == true); }
+    private void CheckUpdates_Click(object sender, RoutedEventArgs e) => _host.CheckForUpdatesNow();
+    private void InstallUpdate_Click(object sender, RoutedEventArgs e) => _host.InstallUpdateNow();
     private void ShareGitHub_Click(object sender, RoutedEventArgs e) => _host.ShareOnGitHub();
 
     private void UpdateAlertHint(AppSettings s) =>

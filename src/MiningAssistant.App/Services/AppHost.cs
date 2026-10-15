@@ -104,6 +104,8 @@ public sealed partial class AppHost : IDisposable
         if (Settings.ShowPanelOnStartup || !_profile.HasRegion(RoiNames.RS) || _ocr is null) _settingsWindow.Show();
         UpdateStatus();
 
+        InitUpdates();
+
         // Conditions for the app to work: right after activation, and once for existing users.
         if (JustActivated || !Settings.RequirementsAcknowledged) ShowRequirements();
     }

@@ -20,7 +20,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        _headless = e.Args.Any(a => a.StartsWith("--render-", StringComparison.Ordinal) || a == "--selftest");
+        _headless = e.Args.Any(a => a.StartsWith("--render-", StringComparison.Ordinal) || a is "--selftest" or "--apply-update" or "--update-check");
         AppDomain.CurrentDomain.UnhandledException += (_, ex) => WriteCrash("Unhandled (domain)", ex.ExceptionObject as Exception);
         DispatcherUnhandledException += (_, ex) =>
         {
@@ -29,6 +29,44 @@ public partial class App : Application
             if (_headless) return; // dev renders / self-test never show dialogs on the user's screen
             MessageBox.Show(ex.Exception.Message + "\n\nDetails: " + CrashLogPath, "Mining Assistant by Vorxen — error", MessageBoxButton.OK, MessageBoxImage.Error);
         };
+
+        // "--apply-update <app folder>": this is the NEW version, started from update\staged by the old one.
+        // Wait for the old app to exit, copy this version over it (with rollback) and start it. No window.
+        var apply = Array.IndexOf(e.Args, "--apply-update");
+        if (apply >= 0 && apply + 1 < e.Args.Length)
+        {
+            var target = e.Args[apply + 1];
+            string result;
+            try { result = Updater.Apply(target, startAfter: !e.Args.Contains("--no-start")); }
+            catch (Exception ex) { result = "update failed: " + ex.Message; }
+            try { File.AppendAllText(Path.Combine(target, "config", "app.log"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} Update: {result}{Environment.NewLine}"); }
+            catch { /* the folder may be read-only; nothing else to do */ }
+            Shutdown(0);
+            return;
+        }
+
+        // "--update-check <report.txt>": diagnostics — check GitHub, download + verify + stage if newer, write a report. No window.
+        var check = Array.IndexOf(e.Args, "--update-check");
+        if (check >= 0 && check + 1 < e.Args.Length)
+        {
+            var report = new System.Text.StringBuilder($"current v{Updater.CurrentVersion}{Environment.NewLine}");
+            var code = 0;
+            try
+            {
+                var repo = new Core.Settings.AppPaths().LoadSettings().Updates.Repository;
+                var m = Task.Run(() => Updater.CheckAsync(repo)).GetAwaiter().GetResult(); // off the UI thread: no deadlock
+                report.AppendLine(m is null ? "up to date" : $"newer: v{m.Version} ({m.Size:N0} bytes), signature OK");
+                if (m is not null)
+                {
+                    Task.Run(() => Updater.StageAsync(repo, m)).GetAwaiter().GetResult();
+                    report.AppendLine(Updater.Staged() is { } s ? $"staged v{s.Version}: size, SHA-256 and exe version verified" : "staging failed");
+                }
+            }
+            catch (Exception ex) { report.AppendLine("error: " + ex.Message); code = 1; }
+            File.WriteAllText(e.Args[check + 1], report.ToString());
+            Shutdown(code);
+            return;
+        }
 
         // "--selftest": check this PC headlessly, write config/selftest.txt and exit (no window).
         if (e.Args.Contains("--selftest"))
@@ -93,6 +131,20 @@ public partial class App : Application
             return;
         }
 
+        // A verified update is waiting (downloaded earlier, user agreed to automatic updates): install it now,
+        // before anything opens. The new version takes over from here and starts the updated app.
+        if (!e.Args.Contains("--updated") && !e.Args.Contains("--update-failed") && Updater.Staged() is not null)
+        {
+            var settings = new Core.Settings.AppPaths().LoadSettings();
+            if (settings.Updates.Enabled == true || restarting)
+            {
+                ReleaseSingleInstance();
+                if (Updater.LaunchApply()) { Shutdown(); return; }
+                _single = new Mutex(false, MutexName);
+                try { _single.WaitOne(TimeSpan.FromSeconds(5)); } catch (AbandonedMutexException) { }
+            }
+        }
+
         // License: ask for name + key on first use (or if the stored one is not valid).
         var (license, justActivated) = EnsureLicense();
         if (license is null)
@@ -104,7 +156,8 @@ public partial class App : Application
 
         try
         {
-            _host = new AppHost { LicensedTo = license.Name, JustActivated = justActivated };
+            var outcome = e.Args.FirstOrDefault(a => a is "--updated" or "--update-failed");
+            _host = new AppHost { LicensedTo = license.Name, JustActivated = justActivated, UpdateOutcome = outcome };
             _host.RestartRequested += Restart;
             _host.Start();
             ListenForShowRequests();

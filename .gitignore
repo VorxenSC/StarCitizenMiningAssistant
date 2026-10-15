@@ -500,3 +500,4 @@ dist/
 
 # License signing secret: never in git (back it up in a password manager).
 secrets/
+

@@ -55,6 +55,7 @@ public sealed partial class AppHost
         if (on) _scanner.ForceScan();
         else if (_overlayVisible) _overlay.ShowIdle("⏸ scanning off");
         UpdateStatus();
+        if (!on) OnScanningStopped(); // a postponed update download may run now
     }
 
     // ───────────────────────── start with countdown ─────────────────────────
@@ -293,6 +294,7 @@ public sealed partial class AppHost
         };
 
         health.Add(LearningHealth());
+        health.Add(UpdateHealth());
 
         // Last item: our own windows sit in the middle of the screen by default — exactly where the RS plate appears.
         if (region is not null)

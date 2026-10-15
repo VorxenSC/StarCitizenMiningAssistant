@@ -12,7 +12,7 @@ Overlay para Windows que **lê a tela** durante a mineração com Prospector/MOL
 └──────────────────────┘
 ```
 
-> **Copiloto visual, não um bot.** O app só observa a tela exatamente como você vê. Ele **não** injeta DLL, **não** lê memória, **não** modifica arquivos do jogo, **não** intercepta rede, **não** faz hook e **não** envia nenhuma tecla/mouse ao jogo. Todo processamento (captura + OCR) é local e o app **não abre nenhuma conexão de rede**. Compartilhar assinaturas é sempre manual (copiar para o Discord ou abrir um formulário no seu navegador). Veja [Segurança e anti-cheat](#segurança-e-anti-cheat-easy-anti-cheat).
+> **Copiloto visual, não um bot.** O app só observa a tela exatamente como você vê. Ele **não** injeta DLL, **não** lê memória, **não** modifica arquivos do jogo, **não** intercepta rede, **não** faz hook e **não** envia nenhuma tecla/mouse ao jogo. Todo processamento (captura + OCR) é local. A **única** conexão de rede é a de **atualizações automáticas**, que só funciona se você aceitar: o app baixa os arquivos públicos de release do GitHub e não envia nada sobre você. Compartilhar assinaturas é sempre manual (copiar para o Discord ou abrir um formulário no seu navegador). Veja [Segurança e anti-cheat](#segurança-e-anti-cheat-easy-anti-cheat).
 
 ---
 
@@ -70,6 +70,22 @@ Este repositório (código) é **privado** e não tem releases. Os jogadores bai
 2. Se algo não funcionar, use **Advanced settings → Run self-test** (ou rode `MiningAssistant.exe --selftest`). O relatório `config\selftest.txt` testa pastas, banco de dados, monitores (mínimo 1080p), captura de tela e OCR, e diz o que falta.
 3. Abrir o `.exe` de novo com o app já rodando traz o painel para a frente; antes, parecia que "nada acontecia".
 4. Erros de inicialização aparecem numa mensagem e ficam em `config\crash.log`.
+
+### Atualizações automáticas (a partir da v0.1.9)
+
+Na primeira vez o app pergunta se você quer atualizações automáticas (pode mudar depois em *Functions → Automatic updates*). Ligadas, o app:
+
+1. consulta `https://github.com/VorxenSC/MiningAssistant/releases/latest/download/update.json` ao abrir e a cada 6 horas;
+2. só aceita esse arquivo se a **assinatura digital** (ECDSA P-256) bater com a chave de release embutida no app, e só se a versão for **mais nova**;
+3. baixa `MiningAssistant.zip` **só com a leitura parada** (nunca no meio da mineração), confere tamanho e **SHA-256** contra o manifesto assinado, descompacta em `update\staged\` e confere a versão do `.exe`;
+4. instala **na próxima vez que o app abrir** (ou em *Advanced settings → Install update now*): a versão nova se copia por cima da antiga, com backup em `update\backup\` e volta automática se algo falhar. Sem scripts, sem PowerShell, sem instalador.
+
+`config\`, `debug_snapshots\` e a ativação são preservados. *Advanced settings → Check for updates* consulta na hora, mesmo com as automáticas desligadas. Diagnóstico sem janela: `MiningAssistant.exe --update-check relatorio.txt`.
+
+**Publicar uma versão:** `publish.ps1` gera `dist\MiningAssistant.zip` **e** `dist\update.json` assinado com `secrets\update-signing-key.pem` (fora do git — guarde uma cópia; sem ela nenhuma instalação aceita atualizações novas). Suba os dois arquivos no release do repositório de downloads:
+```bash
+gh release create vX.Y.Z dist\MiningAssistant.zip dist\update.json --repo VorxenSC/MiningAssistant
+```
 
 ### Ativação (key por nome + PC)
 
@@ -352,9 +368,9 @@ O Star Citizen usa Easy Anti-Cheat. O app foi desenhado para ficar **inteirament
 | lê a imagem já composta da área de trabalho (`BitBlt`/`CopyFromScreen`, igual a print, OBS, Discord) — só um retângulo pequeno | abrir o processo do jogo (`OpenProcess`), ler/escrever memória |
 | desenha **suas próprias** janelas (overlay transparente, click-through) | injetar DLL, hook de DirectX/Vulkan/WinAPI, overlay injetado |
 | ouve o teclado por **Raw Input** passivo (`RIDEV_INPUTSINK`: só recebe, não bloqueia nem altera teclas; não é hook) | enviar teclas/mouse ao jogo, macros, automação |
-| lê/grava apenas arquivos na própria pasta; abre arquivos, pastas e links **só quando você clica** | tocar arquivos do jogo; abrir conexão de rede; rodar ferramentas externas em segundo plano |
+| lê/grava apenas arquivos na própria pasta; abre arquivos, pastas e links **só quando você clica**; se você aceitar, baixa atualizações **assinadas** do GitHub | tocar arquivos do jogo; enviar dados; qualquer outra conexão de rede; rodar ferramentas externas em segundo plano |
 
-Isso é **verificado automaticamente**: `tests/MiningAssistant.Tests/AntiCheatSafetyTests.cs` falha o build se qualquer código usar APIs de processo/memória/injeção/entrada sintética/rede, rodar ferramentas de linha de comando lendo a saída delas (como o GitHub CLI), ou importar qualquer função nativa fora de uma lista de 11 funções de `user32.dll`. É uma verificação do código-fonte (procura essas APIs pelo nome): uma rede de proteção contra regressões, não uma prova formal — e o EAC não lê testes.
+Isso é **verificado automaticamente**: `tests/MiningAssistant.Tests/AntiCheatSafetyTests.cs` falha o build se qualquer código usar APIs de processo/memória/injeção/entrada sintética/rede, rodar ferramentas de linha de comando lendo a saída delas (como o GitHub CLI), acessar a rede fora de `Updater.cs` (que só pode falar HTTPS com github.com, não envia nada e exige manifesto assinado), ou importar qualquer função nativa fora de uma lista de 11 funções de `user32.dll`. É uma verificação do código-fonte (procura essas APIs pelo nome): uma rede de proteção contra regressões, não uma prova formal — e o EAC não lê testes.
 
 **Windows SmartScreen em outro PC:** o `.exe` não tem assinatura digital paga, então, ao abrir pela primeira vez um `.zip` baixado da internet, o Windows pode mostrar "o Windows protegeu o computador". Clique em *Mais informações → Executar assim mesmo*, ou, antes de abrir, clique com o botão direito no `.zip` → *Propriedades* → marque *Desbloquear*. Copiar a pasta por pendrive ou pela rede local não gera esse aviso. Uma solução definitiva seria um certificado de assinatura de código.
 **Honestidade sobre o risco:** a detecção técnica do EAC mira injeção, leitura de memória e manipulação de arquivos — nada disso existe aqui. Mas ninguém fora da CIG pode garantir 100% como a política será aplicada. O EULA proíbe software de terceiros *"designed to modify the Game experience and/or give you an advantage"* e programas de macro/automação. Este app não modifica o jogo nem automatiza nada; ele só interpreta um número que já está na sua tela (o mesmo que consultar uma tabela de RS). Se quiser certeza absoluta, pergunte ao suporte da CIG antes de usar.

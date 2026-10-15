@@ -227,6 +227,48 @@ switch (cliArgs[0].ToLowerInvariant())
         return 0;
     }
 
+    case "make-update-key":
+    {
+        // One-time: the release signing key. Private half → secrets/update-signing-key.pem (git-ignored);
+        // paste the printed public half into UpdateVerifier.PublicKeyPem.
+        var root = FindRepoRoot() ?? ".";
+        var file = Path.Combine(root, "secrets", "update-signing-key.pem");
+        if (File.Exists(file)) { Console.WriteLine($"{file} already exists; refusing to overwrite (it would orphan every installed copy)."); return 1; }
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        var (priv, pub) = MiningAssistant.Core.Updates.UpdateVerifier.CreateKeyPair();
+        File.WriteAllText(file, priv);
+        Console.WriteLine($"private key → {file}");
+        Console.WriteLine(pub);
+        return 0;
+    }
+
+    case "sign-update":
+    {
+        // Release step (publish.ps1): writes update.json for the zip, signed with the release key.
+        if (cliArgs.Count < 4) { Console.WriteLine("usage: mining-cli sign-update <MiningAssistant.zip> <version> <update.json> [notes]"); return 1; }
+        var root = FindRepoRoot() ?? ".";
+        var keyFile = Path.Combine(root, "secrets", "update-signing-key.pem");
+        if (!File.Exists(keyFile)) { Console.WriteLine($"missing {keyFile}"); return 1; }
+        var zipPath = cliArgs[1];
+        var m = new MiningAssistant.Core.Updates.UpdateManifest
+        {
+            Version = MiningAssistant.Core.Updates.UpdateVerifier.Strip(cliArgs[2]),
+            Asset = Path.GetFileName(zipPath),
+            Size = new FileInfo(zipPath).Length,
+            Notes = cliArgs.Count > 4 ? cliArgs[4] : "",
+        };
+        using (var fs = File.OpenRead(zipPath)) m.Sha256 = MiningAssistant.Core.Updates.UpdateVerifier.Sha256Hex(fs);
+        var pem = File.ReadAllText(keyFile);
+        static string NoSpace(string s) => string.Concat(s.Where(c => !char.IsWhiteSpace(c)));
+        if (NoSpace(MiningAssistant.Core.Updates.UpdateVerifier.PublicPemOf(pem)) != NoSpace(MiningAssistant.Core.Updates.UpdateVerifier.PublicKeyPem))
+        { Console.WriteLine("the release key does not match UpdateVerifier.PublicKeyPem — installed apps would reject this update"); return 1; }
+        MiningAssistant.Core.Updates.UpdateVerifier.Sign(m, pem);
+        if (!MiningAssistant.Core.Updates.UpdateVerifier.IsSignatureValid(m)) { Console.WriteLine("signature self-check failed"); return 1; }
+        MiningAssistant.Core.Json.Save(cliArgs[3], m);
+        Console.WriteLine($"{cliArgs[3]}: v{m.Version}, {m.Size:N0} bytes, sha256 {m.Sha256[..16]}…, signed");
+        return 0;
+    }
+
     case "make-icon":
     {
         var ico = cliArgs.Count > 1 ? cliArgs[1] : Path.Combine(FindRepoRoot() ?? ".", "src", "MiningAssistant.App", "Assets", "app.ico");
