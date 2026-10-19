@@ -211,19 +211,55 @@ switch (cliArgs[0].ToLowerInvariant())
 
     case "keygen":
     {
-        // Developer tool: license key for a user name on one PC. The player reads the PC code in the
-        // activation window ("Copy name + code") and sends it with the name.
+        // Vorxen's tool: license keys for name + PC code, signed with secrets/license-signing-key.pem.
+        // The player reads the PC code in the activation window ("Copy name + code").
         if (cliArgs.Count < 3 || cliArgs.Count % 2 == 0)
         {
             Console.WriteLine("usage: mining-cli keygen \"User Name\" PC-CODE [\"Other Name\" PC-CODE ...]");
             return 1;
         }
+        using var key = OpenKey("license-signing-key");
         for (var i = 1; i + 1 < cliArgs.Count; i += 2)
         {
             var (name, code) = (cliArgs[i], cliArgs[i + 1]);
-            if (MiningAssistant.Core.Licensing.PcCode.Normalize(code) is not { } pc) { Console.WriteLine($"{name,-30} invalid PC code: {code}"); continue; }
-            Console.WriteLine($"{name,-30} PC {pc}   key {MiningAssistant.Core.Licensing.LicenseKey.Generate(name, pc)}");
+            if (MiningAssistant.Core.Licensing.PcCode.Normalize(code) is not { } pc) { Console.WriteLine($"{name}: invalid PC code {code}"); continue; }
+            var k = MiningAssistant.Core.Licensing.LicenseKey.Generate(name, pc, key);
+            if (!MiningAssistant.Core.Licensing.LicenseKey.IsValid(name, k, pc))
+            { Console.WriteLine("the license key file does not match the public key built into the app — keys would be rejected"); return 1; }
+            Console.WriteLine($"{name}  ·  PC {pc}");
+            Console.WriteLine(k);
+            Console.WriteLine();
         }
+        return 0;
+    }
+
+    case "protect-keys":
+    {
+        // Encrypts every private key in secrets/ with one password (asked twice). Run once in a terminal.
+        var dir = Path.Combine(FindRepoRoot() ?? ".", "secrets");
+        var files = Directory.GetFiles(dir, "*.pem").Where(f => !MiningAssistant.Core.Licensing.KeyFiles.IsEncrypted(File.ReadAllText(f))).ToList();
+        if (files.Count == 0) { Console.WriteLine("All keys in secrets/ are already password-protected."); return 0; }
+        Console.WriteLine("Keys to protect: " + string.Join(", ", files.Select(Path.GetFileName)));
+        Console.WriteLine("Choose a strong password and save it in your password manager. Without it no keys or releases can be made.");
+        var pw = ReadPassword("New password: ");
+        if (pw.Length < 12) { Console.WriteLine("Use at least 12 characters."); return 1; }
+        if (ReadPassword("Repeat password: ") != pw) { Console.WriteLine("The passwords do not match. Nothing was changed."); return 1; }
+        foreach (var f in files)
+            Console.WriteLine($"{Path.GetFileName(f)}: {(MiningAssistant.Core.Licensing.KeyFiles.Protect(f, pw) ? "protected" : "already protected")}");
+        Console.WriteLine("Done. Back up the secrets folder (the .pem files) together with the password.");
+        return 0;
+    }
+    case "make-key":
+    {
+        // New ECDSA P-256 key pair: private half → secrets/<name>.pem (git-ignored, protect it with protect-keys).
+        if (cliArgs.Count < 2) { Console.WriteLine("usage: mining-cli make-key <name>   (e.g. license-signing-key)"); return 1; }
+        var file = Path.Combine(FindRepoRoot() ?? ".", "secrets", cliArgs[1] + ".pem");
+        if (File.Exists(file)) { Console.WriteLine($"{file} already exists; refusing to overwrite."); return 1; }
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        var (priv, pub) = MiningAssistant.Core.Updates.UpdateVerifier.CreateKeyPair();
+        File.WriteAllText(file, priv);
+        Console.WriteLine($"private key → {file}");
+        Console.WriteLine(pub);
         return 0;
     }
 
@@ -244,11 +280,8 @@ switch (cliArgs[0].ToLowerInvariant())
 
     case "sign-update":
     {
-        // Release step (publish.ps1): writes update.json for the zip, signed with the release key.
+        // Release step (publish.ps1): writes update.json for the zip, signed with the (password-protected) release key.
         if (cliArgs.Count < 4) { Console.WriteLine("usage: mining-cli sign-update <MiningAssistant.zip> <version> <update.json> [notes]"); return 1; }
-        var root = FindRepoRoot() ?? ".";
-        var keyFile = Path.Combine(root, "secrets", "update-signing-key.pem");
-        if (!File.Exists(keyFile)) { Console.WriteLine($"missing {keyFile}"); return 1; }
         var zipPath = cliArgs[1];
         var m = new MiningAssistant.Core.Updates.UpdateManifest
         {
@@ -258,13 +291,9 @@ switch (cliArgs[0].ToLowerInvariant())
             Notes = cliArgs.Count > 4 ? cliArgs[4] : "",
         };
         using (var fs = File.OpenRead(zipPath)) m.Sha256 = MiningAssistant.Core.Updates.UpdateVerifier.Sha256Hex(fs);
-        var pem = File.ReadAllText(keyFile);
-        static string NoSpace(string s) => string.Concat(s.Where(c => !char.IsWhiteSpace(c)));
-        if (NoSpace(MiningAssistant.Core.Updates.UpdateVerifier.PublicPemOf(pem)) != NoSpace(MiningAssistant.Core.Updates.UpdateVerifier.PublicKeyPem))
-        { Console.WriteLine("the release key does not match UpdateVerifier.PublicKeyPem — installed apps would reject this update"); return 1; }
-        MiningAssistant.Core.Updates.UpdateVerifier.Sign(m, pem);
-        if (!MiningAssistant.Core.Updates.UpdateVerifier.IsSignatureValid(m)) { Console.WriteLine("signature self-check failed"); return 1; }
-        MiningAssistant.Core.Json.Save(cliArgs[3], m);
+        using (var key = OpenKey("update-signing-key")) MiningAssistant.Core.Updates.UpdateVerifier.Sign(m, key);
+        if (!MiningAssistant.Core.Updates.UpdateVerifier.IsSignatureValid(m, MiningAssistant.Core.Updates.UpdateVerifier.PublicKeyPem))
+        { Console.WriteLine("the release key does not match UpdateVerifier.PublicKeyPem — installed apps would reject this update"); return 1; }        MiningAssistant.Core.Json.Save(cliArgs[3], m);
         Console.WriteLine($"{cliArgs[3]}: v{m.Version}, {m.Size:N0} bytes, sha256 {m.Sha256[..16]}…, signed");
         return 0;
     }
@@ -413,6 +442,31 @@ static int Usage()
 }
 
 /// <summary>Generates HUD-like frames: dark noisy background, colored digits, distractor text.</summary>
+/// <summary>Opens secrets/&lt;name&gt;.pem; the password comes from MA_KEY_PASSWORD or is typed (hidden).</summary>
+static System.Security.Cryptography.ECDsa OpenKey(string name)
+{
+    var file = Path.Combine(FindRepoRoot() ?? ".", "secrets", name + ".pem");
+    if (!File.Exists(file)) throw new FileNotFoundException($"missing {file}");
+    return MiningAssistant.Core.Licensing.KeyFiles.Open(file, () =>
+        Environment.GetEnvironmentVariable("MA_KEY_PASSWORD") is { Length: > 0 } env ? env : ReadPassword($"Password for {name}: "));
+}
+
+static string ReadPassword(string prompt)
+{
+    Console.Write(prompt);
+    if (Console.IsInputRedirected) return Console.ReadLine() ?? "";
+    var sb = new System.Text.StringBuilder();
+    while (true)
+    {
+        var k = Console.ReadKey(intercept: true);
+        if (k.Key == ConsoleKey.Enter) break;
+        if (k.Key == ConsoleKey.Backspace) { if (sb.Length > 0) sb.Length--; continue; }
+        if (!char.IsControl(k.KeyChar)) sb.Append(k.KeyChar);
+    }
+    Console.WriteLine();
+    return sb.ToString();
+}
+
 static class Synth
 {
     public static void Generate(string outDir, MaterialDatabase db)
@@ -479,3 +533,4 @@ static class Synth
         Console.WriteLine($"Wrote {cases.Length} images + profile.roi.json to {outDir}");
     }
 }
+

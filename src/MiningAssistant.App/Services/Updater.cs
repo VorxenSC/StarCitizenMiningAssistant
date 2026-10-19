@@ -55,6 +55,15 @@ public static class Updater
         var json = await Http.GetStringAsync($"https://github.com/{repository}/releases/latest/download/update.json", ct);
         var m = Json.Deserialize<UpdateManifest>(json);
         if (!UpdateVerifier.IsSignatureValid(m)) throw new InvalidDataException("update.json is not signed with the release key");
+
+        // Replay guard: never accept a manifest older than the newest one already seen on this PC
+        // (someone serving an old, still validly signed release to hold players back).
+        var seenFile = Path.Combine(UpdateDir, "seen.json");
+        DateTime? seen = null;
+        try { if (File.Exists(seenFile)) seen = Json.Deserialize<UpdateManifest>(File.ReadAllText(seenFile)).IssuedAt; } catch { /* unreadable: ignore */ }
+        if (seen is { } s && m.IssuedAt < s) throw new InvalidDataException("update.json is older than one already seen (possible replay)");
+        if (seen is null || m.IssuedAt > seen) Json.Save(seenFile, new UpdateManifest { Version = m.Version, IssuedAt = m.IssuedAt });
+
         return UpdateVerifier.IsNewer(m.Version, CurrentVersion) ? m : null;
     }
 
