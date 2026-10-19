@@ -14,25 +14,47 @@ public static class SignatureShare
 {
     /// <summary>GitHub accepts long URLs, but browsers and proxies get unreliable past ~8 KB.</summary>
     public const int MaxIssueUrlLength = 7500;
+    public const int MaxDiscordLength = 2000;
 
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
     private static string Rs(int v) => v.ToString("N0", Inv);
 
+    /// <summary>Free text is capped so one long note cannot break the link or the message.</summary>
+    public const int MaxNameLength = 60, MaxNotesLength = 200;
+
     private static string Line(LearnedSignature s) =>
-        $"RS {Rs(s.ObservedRS)} = {s.Name} ×{s.Count} (base {Rs(s.BaseRS)}, {s.Kind})" +
-        (string.IsNullOrWhiteSpace(s.Notes) ? "" : $" — {s.Notes.Trim()}");
+        $"RS {Rs(s.ObservedRS)} = {Clean(s.Name, MaxNameLength)} ×{s.Count} (base {Rs(s.BaseRS)}, {s.Kind})" +
+        (string.IsNullOrWhiteSpace(s.Notes) ? "" : $" — {Clean(s.Notes, MaxNotesLength)}");
+
+    /// <summary>One line, limited length, no @mentions (a zero-width space after @ keeps the text readable but inert).</summary>
+    public static string Clean(string? text, int max)
+    {
+        var t = string.Join(" ", (text ?? "").Split(new[] { '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries)).Trim();
+        if (t.Length > max) t = t[..(max - 1)].TrimEnd() + "…";
+        return t.Replace("@", "@​");
+    }
 
     public static string Title(IReadOnlyList<LearnedSignature> items) =>
         items.Count == 1 ? $"New signature: {Line(items[0])}" : $"{items.Count} new signatures";
 
     /// <summary>Plain text for Discord (or any chat).</summary>
-    public static string DiscordText(IReadOnlyList<LearnedSignature> items, string appVersion)
+    public static string DiscordText(IReadOnlyList<LearnedSignature> items, string appVersion) => DiscordText(items, appVersion, out _);
+
+    /// <summary>Same, saying how many of <paramref name="items"/> fit (the first <paramref name="shown"/>).</summary>
+    public static string DiscordText(IReadOnlyList<LearnedSignature> items, string appVersion, out int shown)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"**Mining Assistant — {(items.Count == 1 ? "new signature" : $"{items.Count} new signatures")}** (app v{appVersion})");
+        shown = 0;
         foreach (var s in items)
-            sb.AppendLine($"• {Line(s)} · game {Version(s)} · {s.LearnedAt:yyyy-MM-dd}");
+        {
+            var line = $"• {Line(s)} · game {Version(s)} · {s.LearnedAt:yyyy-MM-dd}";
+            if (sb.Length + line.Length > MaxDiscordLength - 60) break; // Discord rejects messages over 2000 characters
+            sb.AppendLine(line);
+            shown++;
+        }
+        if (shown < items.Count) sb.AppendLine($"…and {items.Count - shown} more (share again for the rest)");
         return sb.ToString().TrimEnd();
     }
 
@@ -71,5 +93,5 @@ public static class SignatureShare
 
     private static string Version(LearnedSignature s) => string.IsNullOrWhiteSpace(s.GameVersion) ? "?" : s.GameVersion;
 
-    private static string Cell(string text) => (text ?? "").Replace("|", "/").Replace("\r", " ").Replace("\n", " ").Trim();
+    private static string Cell(string text) => Clean(text, MaxNotesLength).Replace("|", "/");
 }

@@ -116,7 +116,10 @@ public sealed partial class AppHost
     public void ShareForDiscord()
     {
         if (ToShare() is not { } items) return;
-        try { System.Windows.Clipboard.SetText(SignatureShare.DiscordText(items, AppVersion)); }
+        var text = SignatureShare.DiscordText(items, AppVersion, out var shown);
+        // Only what fit in one Discord message counts as shared; the rest stays "not shared" for the next copy.
+        items = items.Take(shown).ToList();
+        try { System.Windows.Clipboard.SetText(text); }
         catch (Exception ex)
         {
             Log("Clipboard failed: " + ex.Message);
@@ -134,7 +137,13 @@ public sealed partial class AppHost
     {
         if (ToShare() is not { } items) return;
         var url = SignatureShare.IssueUrl(Settings.Share.Repository, items, AppVersion, out var included);
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = url, UseShellExecute = true });
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = url, UseShellExecute = true }); }
+        catch (Exception ex)
+        {
+            Log("Opening the browser failed: " + ex.Message);
+            System.Windows.MessageBox.Show("Could not open your web browser. Use “Share on Discord (copy)” instead.", "Share learned signatures");
+            return;
+        }
         MarkShared(items.Take(included), "github");
         Flash(included < items.Count
             ? $"🌐 opened a GitHub issue with {included} of {items.Count} — click it again for the rest"

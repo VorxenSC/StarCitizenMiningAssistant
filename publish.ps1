@@ -22,13 +22,13 @@ if (Get-Process MiningAssistant -ErrorAction SilentlyContinue) {
 dotnet publish $app -c Release -r win-x64 --self-contained false -o publish -nologo -v q
 if ($LASTEXITCODE -ne 0) { throw 'framework-dependent publish failed' }
 
-dotnet publish $app -c Release -r win-x64 --self-contained true -o dist\MiningAssistant -nologo -v q
+dotnet publish $app -c Release -r win-x64 --self-contained true -o dist\MiningAssistant -nologo -v q -p:DebugType=None -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) { throw 'self-contained publish failed' }
 
 # Zip without any local config / diagnostics, so the other PC starts clean.
 $zip = 'dist\MiningAssistant.zip'
 if (Test-Path $zip) { Remove-Item -LiteralPath $zip }
-$items = Get-ChildItem dist\MiningAssistant | Where-Object { $_.Name -notin 'config', 'diagnostics', 'unknown_signatures', 'debug_snapshots', 'update' }
+$items = Get-ChildItem dist\MiningAssistant | Where-Object { $_.Name -notin 'config', 'diagnostics', 'unknown_signatures', 'debug_snapshots', 'update' -and $_.Extension -ne '.pdb' }
 Compress-Archive -Path $items.FullName -DestinationPath $zip
 
 # Signed update manifest: installed apps only accept an update whose update.json verifies against the

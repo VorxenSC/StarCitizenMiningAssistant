@@ -34,12 +34,10 @@ public sealed partial class AppHost
         else if (UpdateOutcome == "--update-failed")
         {
             Log("The last update could not be installed and was rolled back.");
-            Ui.BeginInvoke(() => MessageBox.Show("The update could not be installed, so the previous version was restored.\n\nIt will try again later; details are in config/app.log.",
+            Ui.BeginInvoke(() => MessageBox.Show("The update could not be installed, so the previous version was restored.\n\n" +
+                "It will not be retried automatically. To try again: Advanced settings → Install update now. Details are in config/app.log.",
                 "Mining Assistant by Vorxen — update", MessageBoxButton.OK, MessageBoxImage.Warning));
         }
-
-        // The copy we updated from may still have been running a moment ago; tidy up a bit later.
-        _ = Task.Delay(TimeSpan.FromSeconds(20)).ContinueWith(_ => { if (Updater.Staged() is null) Updater.CleanUp(); });
 
         _updateTimer.Tick += (_, _) => _ = CheckForUpdatesAsync(manual: false);
         _updateTimer.Start();
@@ -47,7 +45,12 @@ public sealed partial class AppHost
         Ui.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, async () =>
         {
             if (Settings.Updates.Enabled is null) AskUpdateConsent();
-            await Task.Delay(TimeSpan.FromSeconds(15));
+            // One step after the other on the UI thread, so tidying up can never race a download:
+            // first remove what the previous update left behind (the copy we updated from has exited by now)…
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            if (_staged is null && !_updateBusy && Updater.FailedVersion() is null) await Task.Run(Updater.CleanUp);
+            // …then look for a new version.
+            await Task.Delay(TimeSpan.FromSeconds(10));
             await CheckForUpdatesAsync(manual: false);
         });
     }
@@ -103,6 +106,12 @@ public sealed partial class AppHost
                 if (manual) Flash($"✓ up to date (v{Updater.CurrentVersion})", 3);
                 return;
             }
+            if (!manual && Updater.FailedVersion() == m.Version)
+            {
+                _updateProblem = true;
+                _updateStatus = $"installing v{m.Version} failed and was rolled back — Advanced settings → Check for updates, then Install update now, to try again";
+                return;
+            }
             Log($"Update available: v{m.Version}.");
             if (IsScanning || _countdown > 0)
             {
@@ -115,7 +124,7 @@ public sealed partial class AppHost
         catch (Exception ex)
         {
             _updateProblem = true;
-            _updateStatus = "could not check for updates: " + ex.Message;
+            _updateStatus = "could not check for updates: " + ex.Message + " — it will try again later";
             Log("Update check failed: " + ex.Message);
             if (manual) Flash("⚠ update check failed (see the checklist)", 4);
         }
@@ -145,13 +154,15 @@ public sealed partial class AppHost
         if (_updateWaiting is not { } m || _updateBusy) return;
         _updateBusy = true;
         try { await StageAsync(m); }
-        catch (Exception ex) { _updateProblem = true; _updateStatus = "download failed: " + ex.Message; Log("Update download failed: " + ex.Message); }
+        catch (Exception ex) { _updateProblem = true; _updateStatus = "download failed: " + ex.Message + " — it will try again later"; Log("Update download failed: " + ex.Message); }
         finally { _updateBusy = false; UpdateStatus(); }
     }
 
     /// <summary>"Install update now": restart; the next start applies the staged version.</summary>
     public void InstallUpdateNow()
     {
+        Updater.ClearFailed(); // the user asks explicitly: try a failed version again
+        _staged = Updater.Staged();
         if (_staged is null) { Flash("No update is waiting — click Check for updates first", 3); return; }
         Log("Installing the staged update now.");
         RestartApp();
@@ -161,7 +172,7 @@ public sealed partial class AppHost
     {
         null => new(true, "Updates", "automatic updates not set up yet"),
         false => new(true, "Updates", $"automatic updates off (v{Updater.CurrentVersion}) — Advanced settings → Check for updates"),
-        _ when _updateProblem => new(true, "Updates", _updateStatus + " — it will try again later", Notice: true),
+        _ when _updateProblem => new(true, "Updates", _updateStatus, Notice: true),
         _ => new(true, "Updates", _updateStatus.Length > 0 ? _updateStatus : $"on (v{Updater.CurrentVersion})"),
     };
 }

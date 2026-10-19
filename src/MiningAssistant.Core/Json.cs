@@ -27,11 +27,21 @@ public static class Json
 
     public static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Options);
 
-    /// <summary>Loads a JSON file, or creates it with defaults when it does not exist.</summary>
+    /// <summary>
+    /// Loads a JSON file, or creates it with defaults when it does not exist. A file that cannot be read as
+    /// JSON (truncated, hand-edited by mistake) is kept as "&lt;name&gt;.bad" and replaced by defaults, so a
+    /// broken settings file never stops the app from starting.
+    /// </summary>
     public static T LoadOrCreate<T>(string path) where T : new()
     {
         if (File.Exists(path))
-            return Deserialize<T>(File.ReadAllText(path));
+        {
+            try { return Deserialize<T>(File.ReadAllText(path)); }
+            catch (Exception ex) when (ex is JsonException or InvalidDataException or NotSupportedException)
+            {
+                File.Copy(path, path + ".bad", overwrite: true);
+            }
+        }
 
         var value = new T();
         Save(path, value);

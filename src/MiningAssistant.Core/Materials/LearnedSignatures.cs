@@ -47,8 +47,8 @@ public sealed class LearnedSignatureStore
     public IReadOnlyList<LearnedSignature> All => Data.Signatures;
     public IEnumerable<LearnedSignature> Pending => Data.Signatures.Where(s => !s.Submitted);
 
-    public void Reload() =>
-        Data = File.Exists(_path) ? Json.Deserialize<LearnedSignatureFile>(File.ReadAllText(_path)) : new LearnedSignatureFile();
+    /// <summary>A damaged file is kept as .bad and the app starts with an empty list instead of failing.</summary>
+    public void Reload() => Data = Json.LoadOrCreate<LearnedSignatureFile>(_path);
 
     public void Save() => Json.Save(_path, Data);
 

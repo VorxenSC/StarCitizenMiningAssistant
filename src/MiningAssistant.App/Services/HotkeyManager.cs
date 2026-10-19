@@ -21,6 +21,9 @@ public sealed class HotkeyManager : IDisposable
     private readonly HwndSource _source;
     private readonly List<(uint mods, uint vk, Action action)> _chords = new();
     private readonly HashSet<uint> _down = new();
+    /// <summary>Last event (down or auto-repeat) per held key; see <see cref="ForgetStaleKeys"/>.</summary>
+    private readonly Dictionary<uint, DateTime> _lastSeen = new();
+    private static readonly TimeSpan StaleAfter = TimeSpan.FromSeconds(2);
 
     public List<string> Failures { get; } = new();
     public bool RawInputActive { get; }
@@ -123,14 +126,19 @@ public sealed class HotkeyManager : IDisposable
         if (msg != Win32.WM_INPUT || !Win32.TryReadKeyboard(lParam, out var vkey, out var isUp)) return IntPtr.Zero;
         if (vkey == 0 || vkey == 0xFF) return IntPtr.Zero; // fake/overrun keys
 
+        var now = DateTime.UtcNow;
         if (isUp)
         {
             _down.Remove(vkey);
+            _lastSeen.Remove(vkey);
             return IntPtr.Zero;
         }
 
+        ForgetStaleKeys(now);
         // Fire on the up→down transition only (ignore auto-repeat while held).
-        if (!_down.Add(vkey)) return IntPtr.Zero;
+        var isNew = _down.Add(vkey);
+        _lastSeen[vkey] = now;
+        if (!isNew) return IntPtr.Zero;
         KeysReceived++;
         LastKeyAt = DateTime.Now;
 
@@ -143,6 +151,21 @@ public sealed class HotkeyManager : IDisposable
             }
 
         return IntPtr.Zero; // let DefWindowProc clean up WM_INPUT
+    }
+
+    /// <summary>
+    /// A key-up can be lost (Win+L, a UAC prompt, switching user): the key would then look held forever and,
+    /// for Ctrl/Alt/Shift/Win, block every hotkey without modifiers. A key really held down keeps sending
+    /// auto-repeat events several times per second, so one silent for 2 s is treated as released.
+    /// </summary>
+    private void ForgetStaleKeys(DateTime now)
+    {
+        foreach (var (key, seen) in _lastSeen.ToList())
+            if (now - seen > StaleAfter)
+            {
+                _down.Remove(key);
+                _lastSeen.Remove(key);
+            }
     }
 
     public void Dispose()

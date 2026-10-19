@@ -26,13 +26,13 @@ namespace MiningAssistant.App.Services;
 public static class Updater
 {
     public const string MutexName = "StarCitizenMiningAssistant.SingleInstance";
-    private static readonly string[] KeepFolders = { "config", "debug_snapshots", "diagnostics", "unknown_signatures", "update", "secrets" };
+    private const long MaxManifestBytes = 16 * 1024;
 
     private static readonly HttpClient Http = CreateClient();
 
     private static HttpClient CreateClient()
     {
-        var c = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+        var c = new HttpClient { Timeout = TimeSpan.FromMinutes(10), MaxResponseContentBufferSize = MaxManifestBytes };
         c.DefaultRequestHeaders.UserAgent.ParseAdd("MiningAssistant-Updater/" + CurrentVersion);
         return c;
     }
@@ -44,12 +44,14 @@ public static class Updater
     private static string UpdateDir => Path.Combine(AppDir, "update");
     private static string StagedDir => Path.Combine(UpdateDir, "staged");
     private static string ReadyFile => Path.Combine(StagedDir, "READY.json");
+    private static string FailedFile => Path.Combine(UpdateDir, "failed.json");
 
     // ───────────────────────── 1. check ─────────────────────────
 
     /// <summary>The signed manifest of the latest release, if it is newer than this app; otherwise null.</summary>
     public static async Task<UpdateManifest?> CheckAsync(string repository, CancellationToken ct = default)
     {
+        if (!UpdateVerifier.IsRepositoryName(repository)) throw new ArgumentException($"invalid update repository \"{repository}\" in settings");
         var json = await Http.GetStringAsync($"https://github.com/{repository}/releases/latest/download/update.json", ct);
         var m = Json.Deserialize<UpdateManifest>(json);
         if (!UpdateVerifier.IsSignatureValid(m)) throw new InvalidDataException("update.json is not signed with the release key");
@@ -65,14 +67,26 @@ public static class Updater
         {
             if (!File.Exists(ReadyFile)) return null;
             var m = Json.Deserialize<UpdateManifest>(File.ReadAllText(ReadyFile));
-            return UpdateVerifier.IsSignatureValid(m) && UpdateVerifier.IsNewer(m.Version, CurrentVersion)
-                   && File.Exists(Path.Combine(StagedDir, "MiningAssistant.exe")) ? m : null;
+            var exe = Path.Combine(StagedDir, UpdateInstaller.ExeName);
+            return UpdateVerifier.IsSignatureValid(m) && UpdateVerifier.IsNewer(m.Version, CurrentVersion) && File.Exists(exe)
+                   && FailedVersion() != m.Version // failed once: wait for "Install update now" or a new download
+                   && UpdateVerifier.Strip(FileVersionInfo.GetVersionInfo(exe).ProductVersion ?? "") == UpdateVerifier.Strip(m.Version) ? m : null;
         }
         catch { return null; }
     }
 
+    /// <summary>The version whose installation failed last time (it is not retried automatically).</summary>
+    public static string? FailedVersion()
+    {
+        try { return File.Exists(FailedFile) ? Json.Deserialize<UpdateManifest>(File.ReadAllText(FailedFile)).Version : null; }
+        catch { return null; }
+    }
+
+    public static void ClearFailed() => TryDelete(FailedFile);
+
     public static async Task StageAsync(string repository, UpdateManifest m, CancellationToken ct = default)
     {
+        if (!UpdateVerifier.IsRepositoryName(repository) || !UpdateVerifier.IsSignatureValid(m)) throw new InvalidDataException("refusing an unsigned or malformed update");
         Directory.CreateDirectory(UpdateDir);
         var zip = Path.Combine(UpdateDir, "download.zip");
         var url = $"https://github.com/{repository}/releases/download/v{m.Version}/{m.Asset}";
@@ -80,9 +94,20 @@ public static class Updater
         using (var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct))
         {
             response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentLength is long announced && announced != m.Size)
+                throw new InvalidDataException($"the server announces {announced:N0} bytes, the signed release says {m.Size:N0}");
             await using var src = await response.Content.ReadAsStreamAsync(ct);
             await using var dst = File.Create(zip);
-            await src.CopyToAsync(dst, ct);
+            // Never write more than the signed size: a bad server cannot fill the disk.
+            var buffer = new byte[81920];
+            long total = 0;
+            int read;
+            while ((read = await src.ReadAsync(buffer, ct)) > 0)
+            {
+                total += read;
+                if (total > m.Size) throw new InvalidDataException("the download is larger than the signed release");
+                await dst.WriteAsync(buffer.AsMemory(0, read), ct);
+            }
         }
 
         var size = new FileInfo(zip).Length;
@@ -95,6 +120,7 @@ public static class Updater
         }
 
         if (Directory.Exists(StagedDir)) Directory.Delete(StagedDir, true);
+        ClearFailed(); // a fresh download gets a fresh chance
         ZipFile.ExtractToDirectory(zip, StagedDir);
         TryDelete(zip);
 
@@ -113,7 +139,7 @@ public static class Updater
     /// <summary>Starts the staged new version in apply mode. The caller must then exit right away.</summary>
     public static bool LaunchApply()
     {
-        var exe = Path.Combine(StagedDir, "MiningAssistant.exe");
+        var exe = Path.Combine(StagedDir, UpdateInstaller.ExeName);
         if (Staged() is null || !File.Exists(exe)) return false;
         Process.Start(new ProcessStartInfo(exe, $"--apply-update \"{AppDir}\"") { UseShellExecute = false, WorkingDirectory = StagedDir });
         return true;
@@ -121,88 +147,62 @@ public static class Updater
 
     /// <summary>
     /// Runs inside the NEW version (update\staged\MiningAssistant.exe --apply-update "&lt;app folder&gt;").
-    /// Returns a message for the log; always starts an app (new on success, old after a rollback).
+    /// Holds the single-instance mutex for the whole copy, so the app cannot be started (or a second
+    /// install launched) half-way. Returns a message for the log and starts the resulting app.
     /// </summary>
     public static string Apply(string targetDir, bool startAfter = true)
     {
         var source = AppDir;
-        var backup = Path.Combine(targetDir, "update", "backup");
-        var log = new List<string>();
+        if (!File.Exists(Path.Combine(source, "READY.json")))
+            return "refused: --apply-update only runs from a verified update\\staged folder";
+        var version = CurrentVersion;
 
-        // Wait until the old app has exited (it holds the single-instance mutex).
-        using (var mutex = new Mutex(false, MutexName))
-        {
-            bool owned;
-            try { owned = mutex.WaitOne(TimeSpan.FromSeconds(60)); }
-            catch (AbandonedMutexException) { owned = true; }
-            if (owned) mutex.ReleaseMutex();
-            else return "the old version did not close; update postponed";
-        }
+        using var mutex = new Mutex(false, MutexName);
+        bool owned;
+        try { owned = mutex.WaitOne(TimeSpan.FromSeconds(60)); }
+        catch (AbandonedMutexException) { owned = true; }
+        if (!owned) return "the old version did not close within 60 s; update postponed";
 
-        var copied = new List<(string target, string? backedUp)>();
+        string result;
+        var ok = false;
         try
         {
-            if (Directory.Exists(backup)) Directory.Delete(backup, true);
-            foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
-            {
-                var rel = Path.GetRelativePath(source, file);
-                if (rel.Equals("READY.json", StringComparison.OrdinalIgnoreCase) || KeepFolders.Any(k => rel.StartsWith(k + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-                var target = Path.Combine(targetDir, rel);
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                string? saved = null;
-                if (File.Exists(target))
-                {
-                    saved = Path.Combine(backup, rel);
-                    Directory.CreateDirectory(Path.GetDirectoryName(saved)!);
-                    Retry(() => File.Move(target, saved, true));
-                }
-                Retry(() => File.Copy(file, target, true));
-                copied.Add((target, saved));
-            }
-            log.Add($"updated {copied.Count} files");
+            var count = UpdateInstaller.Install(source, targetDir, version);
+            result = $"updated to v{version} ({count} files)";
+            ok = true;
         }
         catch (Exception ex)
         {
-            // Roll back: put every replaced file back, remove the new ones.
-            foreach (var (target, saved) in Enumerable.Reverse(copied))
-            {
-                try
-                {
-                    if (saved is not null) File.Move(saved, target, true);
-                    else File.Delete(target);
-                }
-                catch { /* best effort */ }
-            }
-            if (startAfter) StartApp(targetDir, "--update-failed");
-            return "update failed and was rolled back: " + ex.Message;
+            // Remember it, so the next start opens the old version normally instead of retrying forever.
+            try { Json.Save(Path.Combine(targetDir, "update", "failed.json"), new UpdateManifest { Version = version, Notes = ex.Message }); }
+            catch { /* the folder may be read-only */ }
+            result = $"update to v{version} failed and was rolled back: {ex.Message}";
+        }
+        finally
+        {
+            mutex.ReleaseMutex();
         }
 
-        if (startAfter) StartApp(targetDir, "--updated");
-        return string.Join("; ", log);
+        if (startAfter) StartApp(targetDir, ok ? "--updated" : "--update-failed");
+        return result;
     }
 
-    /// <summary>After a successful update (started with --updated): remove the staging copy and the backup.</summary>
+    /// <summary>After a successful update: remove the staging copy and the backup.</summary>
     public static void CleanUp()
     {
         TryDeleteDir(StagedDir);
-        TryDeleteDir(Path.Combine(UpdateDir, "backup"));
+        TryDeleteDir(UpdateInstaller.BackupDir(AppDir));
+    }
+
+    /// <summary>At start: an install interrupted by a crash or power cut is rolled back to the previous version.</summary>
+    public static bool RecoverIfInterrupted()
+    {
+        try { return UpdateInstaller.RecoverIfInterrupted(AppDir); }
+        catch { return false; }
     }
 
     private static void StartApp(string dir, string arg) =>
-        Process.Start(new ProcessStartInfo(Path.Combine(dir, "MiningAssistant.exe"), arg) { UseShellExecute = false, WorkingDirectory = dir });
-
-    /// <summary>Files can stay locked for a moment after the old process exits (antivirus scans, handles closing).</summary>
-    private static void Retry(Action action)
-    {
-        for (var i = 0; ; i++)
-        {
-            try { action(); return; }
-            catch (IOException) when (i < 40) { Thread.Sleep(500); }
-            catch (UnauthorizedAccessException) when (i < 40) { Thread.Sleep(500); }
-        }
-    }
-
+        Process.Start(new ProcessStartInfo(Path.Combine(dir, UpdateInstaller.ExeName), arg) { UseShellExecute = false, WorkingDirectory = dir });
     private static void TryDelete(string file) { try { File.Delete(file); } catch { /* ignore */ } }
     private static void TryDeleteDir(string dir) { try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { /* ignore */ } }
 }

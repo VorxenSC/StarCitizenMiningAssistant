@@ -124,38 +124,44 @@ public partial class App : Application
         {
             // Already running: ask that instance to show its control panel instead of doing nothing.
             try { EventWaitHandle.OpenExisting(ShowEventName).Set(); }
-            catch { MessageBox.Show("Mining Assistant by Vorxen is already running (see the tray icon).", "Mining Assistant by Vorxen"); }
+            catch { MessageBox.Show("Mining Assistant by Vorxen is already running (see the tray icon), or it is installing an update — try again in a few seconds.", "Mining Assistant by Vorxen"); }
             _single.Dispose();
             _single = null;
             Shutdown();
             return;
         }
 
-        // A verified update is waiting (downloaded earlier, user agreed to automatic updates): install it now,
-        // before anything opens. The new version takes over from here and starts the updated app.
-        if (!e.Args.Contains("--updated") && !e.Args.Contains("--update-failed") && Updater.Staged() is not null)
-        {
-            var settings = new Core.Settings.AppPaths().LoadSettings();
-            if (settings.Updates.Enabled == true || restarting)
-            {
-                ReleaseSingleInstance();
-                if (Updater.LaunchApply()) { Shutdown(); return; }
-                _single = new Mutex(false, MutexName);
-                try { _single.WaitOne(TimeSpan.FromSeconds(5)); } catch (AbandonedMutexException) { }
-            }
-        }
-
-        // License: ask for name + key on first use (or if the stored one is not valid).
-        var (license, justActivated) = EnsureLicense();
-        if (license is null)
-        {
-            ReleaseSingleInstance();
-            Shutdown();
-            return;
-        }
-
         try
         {
+            // An install interrupted by a crash or power cut: go back to the previous version first.
+            if (Updater.RecoverIfInterrupted()) WriteCrash("Update", new Exception("an interrupted update was rolled back"));
+
+            // A verified update is waiting (downloaded earlier, user agreed to automatic updates): install it now,
+            // before anything opens. The new version takes over from here and starts the updated app.
+            if (!e.Args.Contains("--updated") && !e.Args.Contains("--update-failed") && Updater.Staged() is not null)
+            {
+                var settings = new Core.Settings.AppPaths().LoadSettings();
+                if (settings.Updates.Enabled == true || restarting)
+                {
+                    ReleaseSingleInstance();
+                    var launched = false;
+                    try { launched = Updater.LaunchApply(); }
+                    catch (Exception ex) { WriteCrash("Starting the update failed", ex); }
+                    if (launched) { Shutdown(); return; }
+                    _single = new Mutex(false, MutexName);
+                    try { _single.WaitOne(TimeSpan.FromSeconds(5)); } catch (AbandonedMutexException) { }
+                }
+            }
+
+            // License: ask for name + key on first use (or if the stored one is not valid).
+            var (license, justActivated) = EnsureLicense();
+            if (license is null)
+            {
+                ReleaseSingleInstance();
+                Shutdown();
+                return;
+            }
+
             var outcome = e.Args.FirstOrDefault(a => a is "--updated" or "--update-failed");
             _host = new AppHost { LicensedTo = license.Name, JustActivated = justActivated, UpdateOutcome = outcome };
             _host.RestartRequested += Restart;
@@ -164,13 +170,16 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
+            // Never leave an invisible process holding the single-instance lock.
             WriteCrash("Startup failed", ex);
             MessageBox.Show("Mining Assistant by Vorxen could not start:\n\n" + ex.Message + "\n\nDetails were written to:\n" + CrashLogPath,
                 "Mining Assistant by Vorxen", MessageBoxButton.OK, MessageBoxImage.Error);
+            _host?.Dispose();
+            _host = null;
+            ReleaseSingleInstance();
             Shutdown(1);
         }
     }
-
     private static Window PreviewPanel()
     {
         var host = new AppHost { LicensedTo = "Vorxen" };

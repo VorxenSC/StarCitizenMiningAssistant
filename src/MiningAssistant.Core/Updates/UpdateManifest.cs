@@ -35,7 +35,7 @@ public static class UpdateVerifier
 
     public static bool IsSignatureValid(UpdateManifest m, string publicKeyPem = PublicKeyPem)
     {
-        if (string.IsNullOrWhiteSpace(m.Signature) || string.IsNullOrWhiteSpace(m.Version) || m.Size <= 0 || m.Sha256.Length != 64) return false;
+        if (m is null || !IsWellFormed(m) || string.IsNullOrWhiteSpace(m.Signature)) return false;
         try
         {
             using var ec = ECDsa.Create();
@@ -47,6 +47,19 @@ public static class UpdateVerifier
             return false;
         }
     }
+
+    /// <summary>
+    /// Shape checks on top of the signature (defence in depth: these values end up in a download URL and file names).
+    /// </summary>
+    public static bool IsWellFormed(UpdateManifest m) =>
+        m.Version is not null && System.Version.TryParse(Strip(m.Version), out _)
+        && m.Asset is not null && System.Text.RegularExpressions.Regex.IsMatch(m.Asset, @"^[A-Za-z0-9._-]{1,100}$") && !m.Asset.Contains("..")
+        && m.Sha256 is not null && System.Text.RegularExpressions.Regex.IsMatch(m.Sha256, "^[0-9a-fA-F]{64}$")
+        && m.Size is > 0 and < 1_000_000_000;
+
+    /// <summary>"owner/name" of a GitHub repository; anything else is refused before it reaches a URL.</summary>
+    public static bool IsRepositoryName(string? r) =>
+        r is not null && System.Text.RegularExpressions.Regex.IsMatch(r, @"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$");
 
     /// <summary>Release side (mining-cli sign-update): fills Signature.</summary>
     public static void Sign(UpdateManifest m, string privateKeyPem)
@@ -79,7 +92,7 @@ public static class UpdateVerifier
     /// <summary>"v0.1.9+abc" → "0.1.9".</summary>
     public static string Strip(string v)
     {
-        v = v.Trim().TrimStart('v', 'V');
+        v = (v ?? "").Trim().TrimStart('v', 'V');
         var plus = v.IndexOfAny(new[] { '+', '-', ' ' });
         return plus >= 0 ? v[..plus] : v;
     }
