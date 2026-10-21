@@ -76,13 +76,13 @@ Este repositório (código) é **privado** e não tem releases. Os jogadores bai
 Na primeira vez o app pergunta se você quer atualizações automáticas (pode mudar depois em *Functions → Automatic updates*). Ligadas, o app:
 
 1. consulta `https://github.com/VorxenSC/MiningAssistant/releases/latest/download/update.json` ao abrir e a cada 6 horas;
-2. só aceita esse arquivo se a **assinatura digital** (ECDSA P-256) bater com a chave de release embutida no app, e só se a versão for **mais nova**;
+2. só aceita esse arquivo se a **assinatura digital** (ECDSA P-256, cobrindo versão, tamanho, SHA-256 e data de emissão) bater com uma das duas chaves de release embutidas no app (a principal ou a de reserva), se a versão for **mais nova** e se o manifesto não for mais antigo que o último já visto neste PC (contra reaplicação de releases antigos);
 3. baixa `MiningAssistant.zip` **só com a leitura parada** (nunca no meio da mineração), confere tamanho e **SHA-256** contra o manifesto assinado, descompacta em `update\staged\` e confere a versão do `.exe`;
 4. instala **na próxima vez que o app abrir** (ou em *Advanced settings → Install update now*): a versão nova se copia por cima da antiga, com backup em `update\backup\` e volta automática se algo falhar. Sem scripts, sem PowerShell, sem instalador.
 
 `config\`, `debug_snapshots\` e a ativação são preservados. *Advanced settings → Check for updates* consulta na hora, mesmo com as automáticas desligadas. Diagnóstico sem janela: `MiningAssistant.exe --update-check relatorio.txt`.
 
-**Publicar uma versão:** `publish.ps1` gera `dist\MiningAssistant.zip` **e** `dist\update.json` assinado com `secrets\update-signing-key.pem` (fora do git — guarde uma cópia; sem ela nenhuma instalação aceita atualizações novas). Suba os dois arquivos no release do repositório de downloads:
+**Publicar uma versão:** `publish.ps1` gera `dist\MiningAssistant.zip` **e** `dist\update.json` assinado com `secrets\update-signing-key.pem` (fora do git, protegido por senha — o script pede a senha; guarde a pasta `secrets\` e a senha no gerenciador de senhas). Proteja as chaves uma vez com `dotnet run --project src/MiningAssistant.Cli -- protect-keys`. A chave de reserva (`secrets\update-backup-key.pem`) só é usada se a principal vazar: os releases passam a ser assinados com ela e a chave vazada sai do app na mesma atualização. Suba os dois arquivos no release do repositório de downloads:
 ```bash
 gh release create vX.Y.Z dist\MiningAssistant.zip dist\update.json --repo VorxenSC/MiningAssistant
 ```

@@ -27,7 +27,7 @@ public partial class ActivationWindow : Window
     {
         var name = NameBox.Text.Trim();
         if (name.Length == 0) { ErrorText.Text = "Enter your name."; NameBox.Focus(); return; }
-        if (LicenseKey.NormalizeKey(KeyBox.Text) is not { } key) { ErrorText.Text = "That is not a complete key. Paste the whole key you received (about 100 characters)."; KeyBox.Focus(); return; }
+        if (LicenseKey.NormalizeKey(KeyBox.Text) is not { } key) { ErrorText.Text = "The key has 16 characters: XXXX-XXXX-XXXX-XXXX."; KeyBox.Focus(); return; }
 
         if (!LicenseKey.IsValid(name, key, _pcCode))
         {

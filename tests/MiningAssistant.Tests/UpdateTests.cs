@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using MiningAssistant.Core.Licensing;
 using MiningAssistant.Core.Updates;
@@ -118,4 +118,20 @@ public class UpdateTests
     [InlineData("garbage", "0.1.8", false)]
     public void Only_strictly_newer_versions_are_offered(string candidate, string current, bool newer) =>
         Assert.Equal(newer, UpdateVerifier.IsNewer(candidate, current));
+
+    [Fact]
+    public void Password_protected_release_keys_open_only_with_the_password()
+    {
+        var file = Path.Combine(Path.GetTempPath(), "ma-key-" + Guid.NewGuid().ToString("N") + ".pem");
+        try
+        {
+            File.WriteAllText(file, UpdateVerifier.CreateKeyPair().privatePem);
+            Assert.True(KeyFiles.Protect(file, "correct horse battery"));
+            Assert.True(KeyFiles.IsEncrypted(File.ReadAllText(file)));
+            Assert.False(KeyFiles.Protect(file, "again"));                       // already protected
+            using (var ok = KeyFiles.Open(file, () => "correct horse battery")) Assert.NotNull(ok);
+            Assert.ThrowsAny<CryptographicException>(() => KeyFiles.Open(file, () => "wrong"));
+        }
+        finally { File.Delete(file); }
+    }
 }

@@ -11,5 +11,17 @@
     <InternalsVisibleTo Include="MiningAssistant.Tests" />
   </ItemGroup>
 
+  <!-- License signing secret (64 hex characters). Kept OUT of git in secrets/license-secret.txt and
+       embedded into this assembly only at build time. Back it up in a password manager: without it no
+       new keys can be made, and a new secret invalidates every key already issued. -->
+  <PropertyGroup>
+    <LicenseSecretFile>$(MSBuildThisFileDirectory)..\..\secrets\license-secret.txt</LicenseSecretFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(LicenseSecretFile)" LogicalName="MiningAssistant.LicenseSecret" Condition="Exists('$(LicenseSecretFile)')" Visible="false" />
+  </ItemGroup>
+  <Target Name="RequireLicenseSecret" BeforeTargets="BeforeBuild" Condition="!Exists('$(LicenseSecretFile)')">
+    <Error Text="secrets/license-secret.txt is missing. Restore it from your password manager (64 hex characters, one line); it is never committed to git." />
+  </Target>
 
 </Project>

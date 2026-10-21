@@ -54,8 +54,8 @@
         <TextBox x:Name="NameBox" MinHeight="48" FontSize="16" Padding="16,0" />
 
         <TextBlock Text="KEY" Style="{StaticResource FieldLabel}" Margin="0,16,0,7" />
-        <TextBox x:Name="KeyBox" MinHeight="96" FontSize="14" Padding="14,8" FontFamily="{StaticResource MonoFont}" CharacterCasing="Upper"
-                 MaxLength="400" AcceptsReturn="True" TextWrapping="Wrap" VerticalContentAlignment="Top" Tag="Paste the key you received (a long block of letters and numbers)" ToolTip="Paste the whole key; spaces, line breaks and dashes do not matter" />
+        <TextBox x:Name="KeyBox" MinHeight="48" FontSize="16" Padding="16,0" FontFamily="{StaticResource MonoFont}" CharacterCasing="Upper"
+                 MaxLength="24" Tag="XXXX-XXXX-XXXX-XXXX" ToolTip="Format XXXX-XXXX-XXXX-XXXX (dashes are optional)" />
 
         <TextBlock x:Name="ErrorText" Foreground="{StaticResource Bad}" TextWrapping="Wrap" FontSize="13.5" Margin="0,12,0,0" />
 

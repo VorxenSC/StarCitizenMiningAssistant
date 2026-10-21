@@ -5,67 +5,63 @@ using System.Text.RegularExpressions;
 namespace MiningAssistant.Core.Licensing;
 
 /// <summary>
-/// License keys bound to a name AND a PC, signed with Vorxen's license key (ECDSA P-256, scheme "MA3").
-/// The key is the 64-byte signature of "MA3|NORMALIZED NAME|PC-CODE" in Crockford base 32 (103 characters,
-/// shown in groups). The app only holds the PUBLIC half, so nobody — not even someone who takes the app
-/// apart — can make a key; only the private half (secrets/license-signing-key.pem, password-protected,
-/// never in git) can. A key only works with its name on the PC whose code it was made for.
+/// License keys bound to a name AND a PC: XXXX-XXXX-XXXX-XXXX (16 Crockford base-32 characters = 80 bits),
+/// computed as HMAC-SHA256(secret, "MA2|" + normalized name + "|" + PC code). Only someone with the secret
+/// can make a valid key; a key only works with the name it was made for (shown as "Welcome …") on the PC
+/// whose code it was made for — so a copied app folder, or a key passed to a friend, does not activate.
 ///
 /// The PC code (XXXX-XXXX) is a hash of the Windows installation id (see <see cref="PcCode"/>); the player
 /// reads it in the activation window and sends it with their name to get a key.
-/// Older schemes (MA1 name only, MA2 HMAC with a secret inside the app) are no longer accepted.
+///
+/// The secret is not in the source: it lives in secrets/license-secret.txt (git-ignored) and is embedded
+/// into this assembly at build time (see MiningAssistant.Core.csproj). The web keygen asks for it.
+///
+/// Limitation, by design: 16 characters cannot hold a public-key signature, so the app must contain the
+/// same secret to check keys. This stops casual sharing, not a determined reverse-engineer who decompiles
+/// the exe. Rotating the secret invalidates every key already issued.
 /// </summary>
 public static class LicenseKey
 {
-    private const string Scheme = "MA3";
+    private const string Scheme = "MA2"; // MA1 = name only (v0.1.1–v0.1.2), no longer accepted
     private const string Alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford: no I, L, O, U
-    public const int KeyLength = 103; // ceil(512 bits / 5)
 
-    /// <summary>Public half of the license key. The private half never leaves Vorxen's PC.</summary>
-    public const string PublicKeyPem = """
-        -----BEGIN PUBLIC KEY-----
-        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjAPpCJ9Yrj7d1JSdIUPOzJrRrgCl
-        7A/50/lxVcY2UvQWA7ch8T4lan+fNtGf0vxbDev0rOlq3WxwqYU095Wkmw==
-        -----END PUBLIC KEY-----
-        """;
+    // Rotated 2026-10-15 (the previous one had been committed to git). Embedded at build time.
+    private static readonly Lazy<byte[]> SecretBytes = new(LoadSecret);
+
+    private static byte[] LoadSecret()
+    {
+        using var stream = typeof(LicenseKey).Assembly.GetManifestResourceStream("MiningAssistant.LicenseSecret")
+            ?? throw new InvalidOperationException("License secret was not embedded at build time.");
+        var hex = new StreamReader(stream).ReadToEnd().Trim();
+        var bytes = Convert.FromHexString(hex);
+        return bytes.Length == 32 ? bytes : throw new InvalidOperationException("License secret must be 32 bytes (64 hex characters).");
+    }
 
     /// <summary>"  vorxen   sc " → "VORXEN SC": case and extra spaces do not change the key.</summary>
-    public static string NormalizeName(string name) =>
-        Regex.Replace(name.Normalize(NormalizationForm.FormC).Trim(), @"\s+", " ").ToUpperInvariant();
+    public static string NormalizeName(string name) => Regex.Replace(name.Trim(), @"\s+", " ").ToUpperInvariant();
 
-    private static byte[] Message(string name, string pcCode)
+    public static string Generate(string name, string pcCode)
     {
         var n = NormalizeName(name);
         if (n.Length == 0) throw new ArgumentException("Name is empty.", nameof(name));
         var pc = PcCode.Normalize(pcCode) ?? throw new ArgumentException("PC code must be XXXX-XXXX.", nameof(pcCode));
-        return Encoding.UTF8.GetBytes($"{Scheme}|{n}|{pc}");
+        var mac = HMACSHA256.HashData(SecretBytes.Value, Encoding.UTF8.GetBytes($"{Scheme}|{n}|{pc}"));
+        return Format(ToBase32(mac)[..16]);
     }
-
-    /// <summary>Vorxen's side (mining-cli keygen / web keygen): sign name + PC with the private license key.</summary>
-    public static string Generate(string name, string pcCode, ECDsa privateKey) =>
-        Format(ToBase32(privateKey.SignData(Message(name, pcCode), HashAlgorithmName.SHA256)));
 
     /// <summary>
-    /// Cleans what a user pasted: case, spaces, line breaks, dashes and the look-alikes O→0, I/L→1, U→V.
-    /// Returns the canonical grouped form, or null if it cannot be a key.
+    /// Cleans what a user typed: case, spaces, missing dashes, and the look-alikes O→0, I/L→1, U→V.
+    /// Returns the canonical XXXX-XXXX-XXXX-XXXX form, or null if it cannot be a key.
     /// </summary>
-    public static string? NormalizeKey(string key) => Clean(key, KeyLength) is { } s ? Format(s) : null;
+    public static string? NormalizeKey(string key) => Clean(key, 16) is { } s ? Format(s) : null;
 
-    public static bool IsValid(string name, string key, string pcCode, string publicKeyPem = PublicKeyPem)
+    public static bool IsValid(string name, string key, string pcCode)
     {
-        if (string.IsNullOrWhiteSpace(name) || Clean(key ?? "", KeyLength) is not { } k || PcCode.Normalize(pcCode) is null) return false;
-        var sig = FromBase32(k);
-        if (sig is null || sig.Length != 64) return false;
-        try
-        {
-            using var ec = ECDsa.Create();
-            ec.ImportFromPem(publicKeyPem);
-            return ec.VerifyData(Message(name, pcCode), sig, HashAlgorithmName.SHA256);
-        }
-        catch (Exception ex) when (ex is CryptographicException or ArgumentException) { return false; }
+        if (string.IsNullOrWhiteSpace(name) || NormalizeKey(key) is not { } k || PcCode.Normalize(pcCode) is null) return false;
+        return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(k), Encoding.ASCII.GetBytes(Generate(name, pcCode)));
     }
 
-    /// <summary>Upper-cases, maps look-alikes (O→0, I/L→1, U→V), drops spaces, line breaks and dashes; null unless exactly <paramref name="length"/> characters remain.</summary>
+    /// <summary>Upper-cases, maps look-alikes (O→0, I/L→1, U→V), drops spaces and dashes; null unless exactly <paramref name="length"/> characters remain.</summary>
     internal static string? Clean(string text, int length)
     {
         var sb = new StringBuilder(length);
@@ -78,8 +74,7 @@ public static class LicenseKey
         return sb.Length == length ? sb.ToString() : null;
     }
 
-    /// <summary>Groups of 8 separated by dashes, so a pasted key is easy to compare by eye.</summary>
-    private static string Format(string s) => string.Join("-", Enumerable.Range(0, (s.Length + 7) / 8).Select(i => s.Substring(i * 8, Math.Min(8, s.Length - i * 8))));
+    private static string Format(string s16) => $"{s16[..4]}-{s16[4..8]}-{s16[8..12]}-{s16[12..16]}";
 
     internal static string ToBase32(byte[] data)
     {
@@ -87,7 +82,7 @@ public static class LicenseKey
         int buffer = 0, bits = 0;
         foreach (var b in data)
         {
-            buffer = ((buffer << 8) | b) & 0xFFFFF;
+            buffer = (buffer << 8) | b;
             bits += 8;
             while (bits >= 5)
             {
@@ -95,29 +90,10 @@ public static class LicenseKey
                 bits -= 5;
             }
         }
-        if (bits > 0) sb.Append(Alphabet[(buffer << (5 - bits)) & 31]); // last partial group, zero-padded
         return sb.ToString();
     }
-
-    internal static byte[]? FromBase32(string s)
-    {
-        var bytes = new List<byte>(s.Length * 5 / 8);
-        int buffer = 0, bits = 0;
-        foreach (var ch in s)
-        {
-            var v = Alphabet.IndexOf(ch);
-            if (v < 0) return null;
-            buffer = ((buffer << 5) | v) & 0xFFFFF;
-            bits += 5;
-            if (bits >= 8)
-            {
-                bytes.Add((byte)(buffer >> (bits - 8)));
-                bits -= 8;
-            }
-        }
-        return bytes.ToArray();
-    }
 }
+
 /// <summary>
 /// Short code that identifies this PC: XXXX-XXXX = first 40 bits of SHA-256("MA-PC|" + machine id) in
 /// Crockford base 32. The machine id itself (Windows MachineGuid) never leaves the PC and cannot be

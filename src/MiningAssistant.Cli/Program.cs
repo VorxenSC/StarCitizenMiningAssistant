@@ -211,21 +211,20 @@ switch (cliArgs[0].ToLowerInvariant())
 
     case "keygen":
     {
-        // Vorxen's tool: license keys for name + PC code, signed with secrets/license-signing-key.pem.
+        // Vorxen's tool: 16-character license keys for name + PC code (HMAC with secrets/license-secret.txt, embedded at build).
         // The player reads the PC code in the activation window ("Copy name + code").
         if (cliArgs.Count < 3 || cliArgs.Count % 2 == 0)
         {
             Console.WriteLine("usage: mining-cli keygen \"User Name\" PC-CODE [\"Other Name\" PC-CODE ...]");
             return 1;
         }
-        using var key = OpenKey("license-signing-key");
         for (var i = 1; i + 1 < cliArgs.Count; i += 2)
         {
             var (name, code) = (cliArgs[i], cliArgs[i + 1]);
             if (MiningAssistant.Core.Licensing.PcCode.Normalize(code) is not { } pc) { Console.WriteLine($"{name}: invalid PC code {code}"); continue; }
-            var k = MiningAssistant.Core.Licensing.LicenseKey.Generate(name, pc, key);
+            var k = MiningAssistant.Core.Licensing.LicenseKey.Generate(name, pc);
             if (!MiningAssistant.Core.Licensing.LicenseKey.IsValid(name, k, pc))
-            { Console.WriteLine("the license key file does not match the public key built into the app — keys would be rejected"); return 1; }
+            { Console.WriteLine("self-check failed — the generated key does not validate"); return 1; }
             Console.WriteLine($"{name}  ·  PC {pc}");
             Console.WriteLine(k);
             Console.WriteLine();
